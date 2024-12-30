@@ -1,5 +1,5 @@
 {
-  "name": "ffi",
+  "name": "asphodel-ts",
   "version": "1.0.0",
   "description": "",
   "main": "main.js",
@@ -11,11 +11,5 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "koffi": "^2.10.0",
-    "ref-array-napi": "^1.2.2",
-    "ref-napi": "^3.0.3",
-    "ref-struct-napi": "^1.1.1",
-    "ref-union-napi": "^1.0.2"
-  }
+  "dependencies": {}
 }
