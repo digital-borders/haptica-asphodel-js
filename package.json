@@ -5,11 +5,14 @@
   "main": "main.js",
   "scripts": {
     "install:mac-arm64": "CXXFLAGS='-DNODE_API_EXPERIMENTAL_NOGC_ENV_OPT_OUT' npm i",
-    "run-examples": "npx tsx .\\examples.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "run-examples": "node binding.js",
+    "test": "node binding.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "dependencies": {}
+  "dependencies": {
+    "node-addon-api": "^8.3.0",
+    "node-gyp": "^11.0.0"
+  }
 }
