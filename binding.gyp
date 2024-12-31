@@ -71,7 +71,7 @@
                   "-fno-exceptions"
                 ],
                 "cflags_cc": [
-                  "-std=c++11",
+                  #"-std=c++11",
                   "-fexceptions"
                 ],
                 "link_settings": {
@@ -100,7 +100,7 @@
                   "-fno-exceptions"
                  ],
                  "cflags_cc": [
-                   "-std=c++11",
+                   #"-std=c++11",
                    "-fexceptions"
                  ],
                 "link_settings": {
