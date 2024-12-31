@@ -16,6 +16,16 @@ You will find Visual studio code installed, node installed and the repo already 
 
 Do these on all OSes for us to be sure whether it will work.
 first install all dependencies
+
+on the binding.gyp set the correct path for the library first
+```gyp
+      'libraries': [
+          # switch library to use here
+          "<(module_root_dir)/asphodel/builds/linux/libasphodel.so"
+      ],
+```
+
+
 ```
 node-gyp configure build
 node-gyp build
