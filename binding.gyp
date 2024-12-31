@@ -103,7 +103,8 @@
                  ],
                 "link_settings": {
                   "libraries": [
-                    "<@(module_root_dir)/build/Release/libasphodel.so"
+                    "<@(module_root_dir)/build/Release/libasphodel.so",
+                    "<@(module_root_dir)/build/Release/libunpack.so"
                   ],
                   "ldflags": [
                   "-L<@(module_root_dir)/build/Release",
@@ -114,7 +115,8 @@
                   {
                     "destination": "build/Release/",
                     "files": [
-                      "<@(module_root_dir)/asphodel/linux/libasphodel.so"
+                      "<@(module_root_dir)/asphodel/builds/linux/libasphodel.so",
+                      "<@(module_root_dir)/asphodel/builds/linux/libunpack.so",
                     ]
                   }
                 ]
