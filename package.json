@@ -6,7 +6,9 @@
   "scripts": {
     "install:mac-arm64": "CXXFLAGS='-DNODE_API_EXPERIMENTAL_NOGC_ENV_OPT_OUT' npm i",
     "run-examples": "node binding.js",
-    "test": "node binding.js"
+    "test": "node binding.js",
+    "gyp-configure": "node-gyp configure",
+    "gyp-build": "node-gyp build"
   },
   "keywords": [],
   "author": "",
