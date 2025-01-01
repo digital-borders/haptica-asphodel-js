@@ -50,12 +50,20 @@ Napi::Value USBFindDevices(const Napi::CallbackInfo &info)
     {
         Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
     }
+    // to remove
+    //n = 1;
     AsphodelDevice_t **devices = new AsphodelDevice_t *[n];
+    // to remove
+    //devices[0] = new AsphodelDevice_t();
     result = asphodel_usb_find_devices(devices, &n);
+    // to remove
+    //n = 1;
     if (result != 0)
     {
         Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
     }
+
+
     Napi::Array arr = Napi::Array::New(info.Env(), n);
 
     for (size_t i = 0; i < n; i++)
