@@ -127,6 +127,100 @@ type Device = {
         protocal_type: number,
         scanning: number
     },
+
+    getStreamCount: () => {
+        count: number,
+        filler_bits: number,
+        id_bits: number
+    },
+    getStream: (index: number) => {
+        channel_count: number,
+        channel_index_list: Uint8Array,
+        counter_bits: number,
+        filler_bits: number,
+        rate: number,
+        rate_error: number,
+        warm_up_delay: number
+    },
+    getStreamChannels: (index: number, length: number) => {
+        result: Uint8Array,
+        length: number
+    }
+    getStreamFormat: (index: number) => {
+        channel_count: number,
+        channel_index_list: Uint8Array,
+        counter_bits: number,
+        filler_bits: number,
+        rate: number,
+        rate_error: number,
+        warm_up_delay: number
+    },
+    enableStream: (index: number, enable: boolean) => void,
+    warmUpStream: (index: number, enable: boolean) => void,
+    getStreamStatus: (index: number) => {
+        enable: number,
+        warmup: number
+    }
+    getStreamRateInfo: (index: number) => {
+        available: number,
+        channel_index: number,
+        invert: number,
+        scale: number,
+        offset: number
+    },
+    getChannelCount: () => number,
+    getChannel: (index: number) => {
+        bits_per_sample: number,
+        channel_type: number,
+        chunks: Uint8Array[],
+        coefficients: Float32Array
+        data_bits: number,
+        filler_bits: number,
+        maximum: number,
+        minimum: number,
+        resolution: number,
+        samples: number,
+        unit_type: number,
+        name: string
+    },
+    getChannelName: (index: number) => string,
+    getChannelInfo: (index: number) => {
+        bits_per_sample: number,
+        channel_type: number,
+        chunks: Uint8Array[],
+        coefficients: Float32Array
+        data_bits: number,
+        filler_bits: number,
+        maximum: number,
+        minimum: number,
+        resolution: number,
+        samples: number,
+        unit_type: number,
+        name: string
+    },
+    getChannelCoefficients: (index: number, length: number) => {
+        result: Float32Array,
+        length: number,
+    },
+    getChannelChunk: (index: number, chunk_number: number, chunk_length: number) => {
+        result: Uint8Array,
+        length: number,
+    },
+    getChannelSpecific: (index: number, data: Uint8Array, reply_length: number) => {
+        result: Uint8Array,
+        length: number,
+    },
+    getChannelCalibration: (index: number) => {
+        available: number,
+        calibration: {
+            base_setting_index: number,
+            maximum: number,
+            minimum: number,
+            offset: number
+            resolution_setting_index: number,
+            scale: number
+        }
+    },
 }
 
 export const getErrorName: (err: number) => string = asp.getErrorName

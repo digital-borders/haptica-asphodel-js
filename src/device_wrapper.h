@@ -170,12 +170,416 @@ public:
                                              InstanceMethod("restartRemoteBoot", &DeviceWrapper::restartRemoteBoot),
                                              InstanceMethod("getRemoteStatus", &DeviceWrapper::getRemoteStatus),
 
+                                             InstanceMethod("getStreamCount", &DeviceWrapper::getStreamCount),
+                                             InstanceMethod("getStream", &DeviceWrapper::getStream),
+                                             InstanceMethod("getStreamChannels", &DeviceWrapper::getStreamChannels),
+                                             InstanceMethod("getStreamFormat", &DeviceWrapper::getStreamFormat),
+                                             InstanceMethod("enableStream", &DeviceWrapper::enableStream),
+                                             InstanceMethod("warmUpStream", &DeviceWrapper::warmupStream),
+                                             InstanceMethod("getStreamStatus", &DeviceWrapper::getStreamStatus),
+                                             InstanceMethod("getStreamRateInfo", &DeviceWrapper::getStreamRateInfo),
+                                             InstanceMethod("getChannelCount", &DeviceWrapper::getChannelCount),
+                                             InstanceMethod("getChannel", &DeviceWrapper::getChannel),
+                                             InstanceMethod("getChannelName", &DeviceWrapper::getChannelName),
+                                             InstanceMethod("getChannelInfo", &DeviceWrapper::getChannelInfo),
+                                             InstanceMethod("getChannelCoefficients", &DeviceWrapper::getChannelCoefficients),
+                                             InstanceMethod("getChannelChunk", &DeviceWrapper::getChannelChunk),
+                                             InstanceMethod("getChannelSpecific", &DeviceWrapper::getChannelSpecific),
+                                             InstanceMethod("getChannelCalibration", &DeviceWrapper::getChannelCallib),
+
                                          });
 
         return fun;
     }
 
-       Napi::Value restartRemoteBoot(const Napi::CallbackInfo &info)
+    Napi::Value getChannelCallib(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        int available = 0;
+        AsphodelChannelCalibration_t c;
+        int result = asphodel_get_channel_calibration_blocking(this->device, index, &available, &c);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::Object ob = Napi::Object::New(info.Env());
+        ob.Set("available", available);
+        Napi::Object calibr = Napi::Object::New(info.Env());
+        calibr.Set("base_setting_index", c.base_setting_index);
+        calibr.Set("maximum", c.maximum);
+        calibr.Set("minimum", c.minimum);
+        calibr.Set("offset", c.offset);
+        calibr.Set("resolution_setting_index", c.resolution_setting_index);
+        calibr.Set("scale", c.scale);
+        ob.Set("calibration", calibr);
+        return ob;
+    }
+
+    Napi::Value getChannelSpecific(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 3)
+        {
+            Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        Napi::Uint8Array data = info[1].As<Napi::Uint8Array>();
+        uint8_t length = info[2].As<Napi::Number>().Uint32Value();
+        Napi::Uint8Array reply = Napi::Uint8Array::New(info.Env(), length);
+        int result = asphodel_channel_specific_blocking(this->device, index, data.Data(), data.ByteLength(), reply.Data(), &length);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::Object ob = Napi::Object::New(info.Env());
+        ob.Set("result", reply);
+        ob.Set("length", length);
+        return ob;
+    }
+
+    Napi::Value getChannelChunk(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 3)
+        {
+            Napi::Error::New(info.Env(), "Expects 3 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        uint8_t chunk_number = info[1].As<Napi::Number>().Uint32Value();
+        uint8_t length = info[2].As<Napi::Number>().Uint32Value();
+
+        Napi::Uint8Array buf = Napi::Uint8Array::New(info.Env(), length);
+        int result = asphodel_get_channel_chunk_blocking(this->device, index, chunk_number, buf.Data(), &length);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::Object ob = Napi::Object::New(info.Env());
+        ob.Set("result", buf);
+        ob.Set("length", length);
+        return ob;
+    }
+
+    Napi::Value getChannelCoefficients(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 2)
+        {
+            Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        uint8_t length = info[1].As<Napi::Number>().Uint32Value();
+        Napi::Float32Array buf = Napi::Float32Array::New(info.Env(), length);
+        int result = asphodel_get_channel_coefficients_blocking(this->device, index, buf.Data(), &length);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::Object ob = Napi::Object::New(info.Env());
+        ob.Set("result", buf);
+        ob.Set("length", length);
+        return ob;
+    }
+
+    Napi::Value getChannelInfo(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        AsphodelChannelInfo_t channel;
+        int result = asphodel_get_channel_info_blocking(this->device, index, &channel);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::Object ob = Napi::Object::New(info.Env());
+
+        ob.Set("bits_per_sample", channel.bits_per_sample);
+        ob.Set("channel_type", channel.channel_type);
+
+        Napi::Array chunks = Napi::Array::New(info.Env(), channel.chunk_count);
+
+        for (int i = 0; i < channel.chunk_count; i++)
+        {
+            Napi::Uint8Array chunk = Napi::Uint8Array::New(info.Env(), channel.chunk_lengths[i]);
+            memcpy(chunk.Data(), channel.chunks[i], channel.chunk_lengths[i]);
+            chunks[i] = chunk;
+        }
+        ob.Set("chunks", chunks);
+
+        Napi::Float32Array coefs = Napi::Float32Array::New(info.Env(), channel.coefficients_length);
+        for (int i = 0; i < channel.coefficients_length; i++)
+        {
+            coefs[i] = channel.coefficients[i];
+        }
+        ob.Set("coefficients", coefs);
+        ob.Set("data_bits", channel.data_bits);
+        ob.Set("filler_bits", channel.filler_bits);
+        ob.Set("maximum", channel.maximum);
+        ob.Set("minimum", channel.minimum);
+        ob.Set("resolution", channel.resolution);
+        ob.Set("samples", channel.samples);
+        ob.Set("unit_type", channel.unit_type);
+        ob.Set("name", Napi::String::New(info.Env(), (char *)channel.name, channel.name_length));
+
+        return ob;
+    }
+
+    Napi::Value getChannelName(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        char buffer[129];
+        memset(buffer, 0, sizeof(buffer));
+        uint8_t length = 128;
+        int result = asphodel_get_channel_name_blocking(this->device, index, buffer, &length);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::String::New(info.Env(), buffer, length);
+    }
+
+    Napi::Value getChannel(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        AsphodelChannelInfo_t *channel = nullptr;
+        int result = asphodel_get_channel_blocking(this->device, index, &channel);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::Object ob = Napi::Object::New(info.Env());
+
+        ob.Set("bits_per_sample", channel->bits_per_sample);
+        ob.Set("channel_type", channel->channel_type);
+
+        Napi::Array chunks = Napi::Array::New(info.Env(), channel->chunk_count);
+
+        for (int i = 0; i < channel->chunk_count; i++)
+        {
+            Napi::Uint8Array chunk = Napi::Uint8Array::New(info.Env(), channel->chunk_lengths[i]);
+            memcpy(chunk.Data(), channel->chunks[i], channel->chunk_lengths[i]);
+            chunks[i] = chunk;
+        }
+        ob.Set("chunks", chunks);
+
+        Napi::Float32Array coefs = Napi::Float32Array::New(info.Env(), channel->coefficients_length);
+        for (int i = 0; i < channel->coefficients_length; i++)
+        {
+            coefs[i] = channel->coefficients[i];
+        }
+        ob.Set("coefficients", coefs);
+        ob.Set("data_bits", channel->data_bits);
+        ob.Set("filler_bits", channel->filler_bits);
+        ob.Set("maximum", channel->maximum);
+        ob.Set("minimum", channel->minimum);
+        ob.Set("resolution", channel->resolution);
+        ob.Set("samples", channel->samples);
+        ob.Set("unit_type", channel->unit_type);
+        ob.Set("name", Napi::String::New(info.Env(), (char *)channel->name, channel->name_length));
+        asphodel_free_channel(channel);
+        return ob;
+    }
+
+    Napi::Value getChannelCount(const Napi::CallbackInfo &info)
+    {
+        int count;
+        int result = asphodel_get_channel_count_blocking(this->device, &count);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Number::From<int>(info.Env(), count);
+    }
+
+    Napi::Value getStreamRateInfo(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        int available, chi, invert;
+        float scale, offset;
+        int result = asphodel_get_stream_rate_info_blocking(this->device, index, &available, &chi, &invert, &scale, &offset);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+
+        Napi::Object ob = Napi::Object::New(info.Env());
+
+        ob.Set("available", available);
+        ob.Set("channel_index", chi);
+        ob.Set("invert", invert);
+        ob.Set("scale", scale);
+        ob.Set("offset", offset);
+
+        return ob;
+    }
+
+    Napi::Value getStreamStatus(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        int enable, warmup;
+        int result = asphodel_get_stream_status_blocking(this->device, index, &enable, &warmup);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+
+        Napi::Object ob = Napi::Object::New(info.Env());
+        ob.Set("enable", enable);
+        ob.Set("warmup", warmup);
+        return ob;
+    }
+
+    Napi::Value warmupStream(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 2)
+        {
+            Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        bool enable = info[1].As<Napi::Boolean>().Value();
+        int result = asphodel_warm_up_stream_blocking(this->device, index, enable);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
+    }
+
+    Napi::Value enableStream(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 2)
+        {
+            Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        bool enable = info[1].As<Napi::Boolean>().Value();
+        int result = asphodel_enable_stream_blocking(this->device, index, enable);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
+    }
+
+    Napi::Value getStreamFormat(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+
+        int index = info[0].As<Napi::Number>().Int32Value();
+        AsphodelStreamInfo_t stream;
+        int result = asphodel_get_stream_format_blocking(this->device, index, &stream);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+
+        Napi::Object ob = Napi::Object::New(info.Env());
+
+        ob.Set("channel_count", stream.channel_count);
+        auto a = Napi::Uint8Array::New(info.Env(), stream.channel_count);
+        memcpy(a.Data(), stream.channel_index_list, stream.channel_count);
+        ob.Set("channel_index_list", a);
+        ob.Set("counter_bits", stream.counter_bits);
+        ob.Set("filler_bits", stream.filler_bits);
+        ob.Set("rate", stream.rate);
+        ob.Set("rate_error", stream.rate_error);
+        ob.Set("warm_up_delay", stream.warm_up_delay);
+
+        return ob;
+    }
+
+    Napi::Value getStreamChannels(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 2)
+        {
+            Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
+        }
+
+        int index = info[0].As<Napi::Number>().Int32Value();
+
+        uint8_t length = info[1].As<Napi::Number>().Int32Value();
+        Napi::Uint8Array buf = Napi::Uint8Array::New(info.Env(), length);
+
+        int result = asphodel_get_stream_channels_blocking(this->device, index, buf.Data(), &length);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+
+        Napi::Object ob = Napi::Object::New(info.Env());
+        ob.Set("result", buf);
+        ob.Set("length", length);
+        return ob;
+    }
+
+    Napi::Value getStream(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        AsphodelStreamInfo_t *stream = nullptr;
+        int result = asphodel_get_stream_blocking(this->device, info[0].As<Napi::Number>().Int32Value(), &stream);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+
+        Napi::Object ob = Napi::Object::New(info.Env());
+        ob.Set("channel_count", stream->channel_count);
+        auto a = Napi::Uint8Array::New(info.Env(), stream->channel_count);
+        memcpy(a.Data(), stream->channel_index_list, stream->channel_count);
+        ob.Set("channel_index_list", a);
+        ob.Set("counter_bits", stream->counter_bits);
+        ob.Set("filler_bits", stream->filler_bits);
+        ob.Set("rate", stream->rate);
+        ob.Set("rate_error", stream->rate_error);
+        ob.Set("warm_up_delay", stream->warm_up_delay);
+        asphodel_free_stream(stream);
+        return ob;
+    }
+
+    Napi::Value getStreamCount(const Napi::CallbackInfo &info)
+    {
+        int count;
+        uint8_t fb;
+        uint8_t ib;
+        int result = asphodel_get_stream_count_blocking(this->device, &count, &fb, &ib);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::Object ob = Napi::Object::New(info.Env());
+        ob.Set("count", count);
+        ob.Set("filler_bits", fb);
+        ob.Set("id_bits", ib);
+        return ob;
+    }
+
+    Napi::Value restartRemoteBoot(const Napi::CallbackInfo &info)
     {
         int result = asphodel_restart_remote_boot_blocking(this->device);
         if (result != 0)
@@ -185,7 +589,7 @@ public:
         return Napi::Value();
     }
 
-       Napi::Value restartRemoteApp(const Napi::CallbackInfo &info)
+    Napi::Value restartRemoteApp(const Napi::CallbackInfo &info)
     {
         int result = asphodel_restart_remote_app_blocking(this->device);
         if (result != 0)
@@ -194,8 +598,6 @@ public:
         }
         return Napi::Value();
     }
-
-
 
     Napi::Value getRemoteStatus(const Napi::CallbackInfo &info)
     {
@@ -214,8 +616,7 @@ public:
         return ob;
     }
 
-
-   Napi::Value restartRemote(const Napi::CallbackInfo &info)
+    Napi::Value restartRemote(const Napi::CallbackInfo &info)
     {
         int result = asphodel_restart_remote_blocking(this->device);
         if (result != 0)
@@ -224,7 +625,6 @@ public:
         }
         return Napi::Value();
     }
-
 
     Napi::Value stopRemote(const Napi::CallbackInfo &info)
     {
@@ -235,7 +635,6 @@ public:
         }
         return Napi::Value();
     }
-
 
     Napi::Value connectRadioBoot(const Napi::CallbackInfo &info)
     {
