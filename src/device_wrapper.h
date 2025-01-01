@@ -94,7 +94,7 @@ public:
                                              InstanceMethod("supportsBootloaderCommands", &DeviceWrapper::asphodelSupportsBootloaderCommands),
                                              InstanceMethod("supportsRFPowerCommands", &DeviceWrapper::asphodelSupportsRFCommands),
                                              InstanceMethod("getProtocalVersion", &DeviceWrapper::getProtocalV),
-                                             InstanceMethod("getBoardInfo", &DeviceWrapper::getBoardInfo),
+                                             InstanceMethod("getProtocalVersionString", &DeviceWrapper::getProtocalVstr),
                                              InstanceMethod("getBoardInfo", &DeviceWrapper::getBoardInfo),
                                              InstanceMethod("getBuildInfo", &DeviceWrapper::getBuildInfo),
                                              InstanceMethod("getBuildDate", &DeviceWrapper::getBuildDate),
@@ -126,7 +126,7 @@ public:
                                              InstanceMethod("getLEDValue", &DeviceWrapper::getLEDValue),
                                              InstanceMethod("setLEDValue", &DeviceWrapper::setLEDValue),
                                              InstanceMethod("getDeviceMode", &DeviceWrapper::getDevMode),
-                                             InstanceMethod("setLEDValue", &DeviceWrapper::setLEDValue),
+                                            // InstanceMethod("setLEDValue", &DeviceWrapper::setLEDValue),
                                              InstanceMethod("setDeviceMode", &DeviceWrapper::setDevMode),
                                              InstanceMethod("getProtocalVersionString", &DeviceWrapper::getProtocalVstr),
                                              InstanceMethod("open", &DeviceWrapper::open),
@@ -321,7 +321,7 @@ public:
         {
             Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
         }
-        return Napi::Value();
+        return arr;
     }
 
     Napi::Value stopStreamingPackets(const Napi::CallbackInfo &info)
@@ -456,7 +456,7 @@ public:
 
     Napi::Value setLEDValue(const Napi::CallbackInfo &info)
     {
-        if (info.Length() != 3)
+        if (info.Length() != 2)
         {
             Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
         }
@@ -498,7 +498,7 @@ public:
     }
     Napi::Value setRgbValuesHex(const Napi::CallbackInfo &info)
     {
-        if (info.Length() != 3)
+        if (info.Length() != 2)
         {
             Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
         }
@@ -514,7 +514,7 @@ public:
 
     Napi::Value setRgbValues(const Napi::CallbackInfo &info)
     {
-        if (info.Length() != 3)
+        if (info.Length() != 2)
         {
             Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
         }
@@ -890,7 +890,7 @@ public:
 
     Napi::Value getProtocalVstr(const Napi::CallbackInfo &info)
     {
-        char buffer[128];
+        char buffer[129];
         memset(buffer, 0, sizeof(buffer));
         int result = asphodel_get_protocol_version_string_blocking(this->device, buffer, 128);
         if (result != 0)
@@ -945,8 +945,8 @@ public:
     {
         //this->errorCbTrigger(this->device, 78, this);
         //printf("done triggering error callback\n");
-        this->device->close_device(this->device);
-        this->device->free_device(this->device);
+        //this->device->close_device(this->device);
+        //this->device->free_device(this->device);
     }
 
 private:

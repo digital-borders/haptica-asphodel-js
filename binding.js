@@ -6,21 +6,10 @@ asp.USBInit()
 let devices = asp.USBFindDevices();
 //devices[0].close();
 
-console.log(devices)
+console.log(asp)
 
-//devices[0].writeNVMRaw(0, new Uint8Array([1,2,3,4,5,6]))
-
-//const res = devices[0].doTranfer(1, new Uint8Array([1,2,3,4,5]), (status, buf)=>{
-//    console.log("called from c++")
-//    console.log(status, buf)
-//})
-
-//console.log(res)
-
-devices[0].setErrorCallback((status)=>{
-    console.log("status: ", status)
-})
+//console.log(asp)
 
 
-asp.USBDeinit()
+//asp.USBDeinit()
 
