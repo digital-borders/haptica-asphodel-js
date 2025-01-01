@@ -73,6 +73,24 @@ type Device = {
     reconnectDeviceApplication: ()=>Device,
     setErrorCallback: (callback: (status:number)=>void)=>void,
     getTransportType: ()=>string,
+    tcpGetAdvertisement: ()=> {
+        tcp_version: number,
+        connected: number,
+        max_incoming_param_length: number,
+        max_outgoing_param_length: number,
+        stream_packet_length: number,
+        protocol_type: number,
+        serial_number: string,
+        board_rev: number,
+        board_type: string,
+        build_info: string,
+        build_date: string,
+        user_tag1: string,
+        user_tag2: string,
+        remote_max_incoming_param_length: number,
+        remote_max_outgoing_param_length: number,
+        remote_stream_packet_length: number
+    }
 }
 
 export const getErrorName: (err:number) =>string = asp.getErrorName
@@ -89,11 +107,21 @@ export const USBPollDevices: (millis: number)=>void = asp.USBPollDevices
 export const USBFindDevices: ()=>Device[] = asp.USBFindDevices
 export const USBGetBackendVersion: ()=>string = asp.USBGetBackendVersion
 
+enum TCPFilter{
+    ASPHODEL_TCP_FILTER_DEFAULT = 0x0, // default parameters used by asphodel_tcp_find_devices()
+    ASPHODEL_TCP_FILTER_PREFER_IPV6 = 0x0, // when a device SN is discovered on multiple protocols return only IPv6
+    ASPHODEL_TCP_FILTER_PREFER_IPV4 = 0x1, // when a device SN is discovered on multiple protocols return only IPv4
+    ASPHODEL_TCP_FILTER_ONLY_IPV6 = 0x2, // only search for devices using IPv6
+    ASPHODEL_TCP_FILTER_ONLY_IPV4 = 0x3, // only search for devices using IPv4
+    ASPHODEL_TCP_FILTER_RETURN_ALL = 0x4 // return each protocol instance of all devices found
+}
+
+
 export const TCPInit: ()=>void = asp.TCPInit
 export const TCPDevicesSupported: ()=>boolean = asp.TCPDevicesSupported
 export const TCPDeinit: ()=>void = asp.TCPDeinit
 export const TCPFindDevices: ()=>Device[] = asp.TCPFindDevices
-export const TCPFindDevicesFilter: (filter:Number)=>Device[] = asp.TCPFindDevicesFilter
+export const TCPFindDevicesFilter: (filter:TCPFilter)=>Device[] = asp.TCPFindDevicesFilter
 export const TCPPollDevices: (millis:number)=>void = asp.TCPPollDevices
 export const TCPCreateDevice: (host:string, port:number, timeout:number, serial: string)=>Device = asp.TCPCreateDevice
 
