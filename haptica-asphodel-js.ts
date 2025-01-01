@@ -88,3 +88,13 @@ export const USBDeInit: ()=>void = asp.USBDeInit
 export const USBPollDevices: (millis: number)=>void = asp.USBPollDevices
 export const USBFindDevices: ()=>Device[] = asp.USBFindDevices
 export const USBGetBackendVersion: ()=>string = asp.USBGetBackendVersion
+
+export const TCPInit: ()=>void = asp.TCPInit
+export const TCPDevicesSupported: ()=>boolean = asp.TCPDevicesSupported
+export const TCPDeinit: ()=>void = asp.TCPDeinit
+export const TCPFindDevices: ()=>Device[] = asp.TCPFindDevices
+export const TCPFindDevicesFilter: (filter:Number)=>Device[] = asp.TCPFindDevicesFilter
+export const TCPPollDevices: (millis:number)=>void = asp.TCPPollDevices
+export const TCPCreateDevice: (host:string, port:number, timeout:number, serial: string)=>Device = asp.TCPCreateDevice
+
+

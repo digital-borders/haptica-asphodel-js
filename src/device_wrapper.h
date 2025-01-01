@@ -1,8 +1,5 @@
 #include <../asphodel-headers/asphodel.h>
 #include <napi.h>
-#include <optional>
-#include <thread>
-
 
 class DeviceWrapper : public Napi::ObjectWrap<DeviceWrapper>
 {
@@ -18,7 +15,7 @@ public:
         if (!wrapper->error_callback.IsEmpty())
         {
             wrapper->error_callback.Call({
-            Napi::Number::From<int>(wrapper->error_callback.Env(), status),
+                Napi::Number::From<int>(wrapper->error_callback.Env(), status),
             });
         }
         return 0;
@@ -45,9 +42,9 @@ public:
             Napi::Uint8Array arr = Napi::Uint8Array::New(wrapper->stream_callback.Env(), packet_size * packet_count);
             memcpy(arr.Data(), stream_data, packet_size * packet_count);
             wrapper->stream_callback.Call({Napi::Number::From<int>(wrapper->stream_callback.Env(), status),
-                                            arr,
-                                            Napi::Number::From<int>(wrapper->stream_callback.Env(), packet_size),
-                                            Napi::Number::From<int>(wrapper->stream_callback.Env(), packet_count)});
+                                           arr,
+                                           Napi::Number::From<int>(wrapper->stream_callback.Env(), packet_size),
+                                           Napi::Number::From<int>(wrapper->stream_callback.Env(), packet_count)});
         }
     }
 
@@ -74,7 +71,7 @@ public:
                                     .Get("dev")
                                     .As<Napi::External<AsphodelDevice_t>>()
                                     .Data();
-        this->transfer_callback  = Napi::FunctionReference();
+        this->transfer_callback = Napi::FunctionReference();
         this->connect_callback = Napi::FunctionReference();
         this->stream_callback = Napi::FunctionReference();
         this->error_callback = Napi::FunctionReference();
@@ -125,7 +122,7 @@ public:
                                              InstanceMethod("getLEDValue", &DeviceWrapper::getLEDValue),
                                              InstanceMethod("setLEDValue", &DeviceWrapper::setLEDValue),
                                              InstanceMethod("getDeviceMode", &DeviceWrapper::getDevMode),
-                                            // InstanceMethod("setLEDValue", &DeviceWrapper::setLEDValue),
+                                             // InstanceMethod("setLEDValue", &DeviceWrapper::setLEDValue),
                                              InstanceMethod("setDeviceMode", &DeviceWrapper::setDevMode),
                                              InstanceMethod("getProtocalVersionString", &DeviceWrapper::getProtocalVstr),
                                              InstanceMethod("open", &DeviceWrapper::open),
@@ -151,9 +148,37 @@ public:
                                              InstanceMethod("reconnectDeviceApplication", &DeviceWrapper::reconnectDeviceApp),
                                              InstanceMethod("setErrorCallback", &DeviceWrapper::setErrCb),
                                              InstanceMethod("getTransportType", &DeviceWrapper::getTranspType),
+                                             InstanceMethod("getTransportType", &DeviceWrapper::getTranspType),
+                                             InstanceMethod("tcpGetAdvertisement", &DeviceWrapper::getTcpAdV),
                                          });
 
         return fun;
+    }
+
+    Napi::Value getTcpAdV(const Napi::CallbackInfo &info)
+    {
+        Asphodel_TCPAdvInfo_t *t = asphodel_tcp_get_advertisement(this->device);
+        Napi::Object ob = Napi::Object::New(info.Env());
+        if (t != nullptr)
+        {
+            ob.Set("tcp_version", Napi::Number::From<uint8_t>(info.Env(), t->tcp_version));
+            ob.Set("connected", Napi::Number::From<uint8_t>(info.Env(), t->connected));
+            ob.Set("max_incoming_param_length", Napi::Number::From<size_t>(info.Env(), t->max_incoming_param_length));
+            ob.Set("max_outgoing_param_length", Napi::Number::From<size_t>(info.Env(), t->max_outgoing_param_length));
+            ob.Set("stream_packet_length", Napi::Number::From<size_t>(info.Env(), t->stream_packet_length));
+            ob.Set("protocol_type", Napi::Number::From<int>(info.Env(), t->protocol_type));
+            ob.Set("serial_number", Napi::String::New(info.Env(), t->serial_number));
+            ob.Set("board_rev", Napi::Number::From<uint8_t>(info.Env(), t->board_rev));
+            ob.Set("board_type", Napi::String::New(info.Env(), t->board_type));
+            ob.Set("build_info", Napi::String::New(info.Env(), t->build_info));
+            ob.Set("build_date", Napi::String::New(info.Env(), t->build_date));
+            ob.Set("user_tag1", Napi::String::New(info.Env(), t->user_tag1));
+            ob.Set("user_tag2", Napi::String::New(info.Env(), t->user_tag2));
+            ob.Set("remote_stream_packet_length", Napi::Number::From<size_t>(info.Env(), t->remote_stream_packet_length));
+            ob.Set("remote_max_outgoing_param_length", Napi::Number::From<size_t>(info.Env(), t->remote_max_incoming_param_length));
+            ob.Set("remote_max_incoming_param_length", Napi::Number::From<size_t>(info.Env(), t->remote_max_outgoing_param_length));
+        }
+        return ob;
     }
 
     Napi::Value reconnectDeviceApp(const Napi::CallbackInfo &info)
@@ -202,7 +227,7 @@ public:
         {
             Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
         }
-        Napi::Function call_back = info[0].As<Napi::Function>(); 
+        Napi::Function call_back = info[0].As<Napi::Function>();
         this->error_callback = Napi::Persistent(call_back);
         return Napi::Value();
     }
@@ -400,11 +425,10 @@ public:
         return Napi::String::New(info.Env(), buffer);
     }
 
-       Napi::Value getTranspType(const Napi::CallbackInfo &info)
+    Napi::Value getTranspType(const Napi::CallbackInfo &info)
     {
         return Napi::String::New(info.Env(), this->device->transport_type);
     }
-
 
     Napi::Value getLocationString(const Napi::CallbackInfo &info)
     {
@@ -942,10 +966,10 @@ public:
 
     ~DeviceWrapper()
     {
-        //this->errorCbTrigger(this->device, 78, this);
-        //printf("done triggering error callback\n");
-        //this->device->close_device(this->device);
-        //this->device->free_device(this->device);
+        // this->errorCbTrigger(this->device, 78, this);
+        // printf("done triggering error callback\n");
+        // this->device->close_device(this->device);
+        // this->device->free_device(this->device);
     }
 
 private:
