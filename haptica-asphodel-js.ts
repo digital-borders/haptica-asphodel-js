@@ -87,4 +87,4 @@ export const USBInit: ()=>void = asp.USBInit
 export const USBDeInit: ()=>void = asp.USBDeInit
 export const USBPollDevices: (millis: number)=>void = asp.USBPollDevices
 export const USBFindDevices: ()=>Device[] = asp.USBFindDevices
-export const USBGetBackendVersion: ()=>void = asp.USBGetBackenVersion
+export const USBGetBackendVersion: ()=>string = asp.USBGetBackendVersion
