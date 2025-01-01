@@ -150,9 +150,314 @@ public:
                                              InstanceMethod("getTransportType", &DeviceWrapper::getTranspType),
                                              InstanceMethod("getTransportType", &DeviceWrapper::getTranspType),
                                              InstanceMethod("tcpGetAdvertisement", &DeviceWrapper::getTcpAdV),
+
+                                             InstanceMethod("stopRadio", &DeviceWrapper::stopRadio),
+                                             InstanceMethod("startRadioScan", &DeviceWrapper::startRadioScan),
+                                             InstanceMethod("getRawRadioScanResults", &DeviceWrapper::getRawRadioScanResults),
+                                             InstanceMethod("getRadioScanResults", &DeviceWrapper::getRadioScanResults),
+                                             InstanceMethod("getRawRadioExtraScanResults", &DeviceWrapper::getRawRadioExtraScanResults),
+                                             InstanceMethod("getRadioExtraScanResults", &DeviceWrapper::getRadioExtraScanResults),
+                                             InstanceMethod("getRadioScanPower", &DeviceWrapper::getRadioScanPower),
+                                             InstanceMethod("connectRadio", &DeviceWrapper::connectRadio),
+                                             InstanceMethod("getRadioStatus", &DeviceWrapper::getRadioStatus),
+                                             InstanceMethod("getRadioCtrlVars", &DeviceWrapper::getRadioCtrlVars),
+                                             InstanceMethod("getRadioDefaultSerial", &DeviceWrapper::getRadioDefaultSerial),
+                                             InstanceMethod("startRadioScanBoot", &DeviceWrapper::startRadioScanBoot),
+                                             InstanceMethod("connectRadioBoot", &DeviceWrapper::connectRadioBoot),
+                                             InstanceMethod("stopRemote", &DeviceWrapper::stopRemote),
+                                             InstanceMethod("restartRemote", &DeviceWrapper::restartRemote),
+                                             InstanceMethod("restartRemoteApp", &DeviceWrapper::restartRemoteApp),
+                                             InstanceMethod("restartRemoteBoot", &DeviceWrapper::restartRemoteBoot),
+                                             InstanceMethod("getRemoteStatus", &DeviceWrapper::getRemoteStatus),
+
                                          });
 
         return fun;
+    }
+
+       Napi::Value restartRemoteBoot(const Napi::CallbackInfo &info)
+    {
+        int result = asphodel_restart_remote_boot_blocking(this->device);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
+    }
+
+       Napi::Value restartRemoteApp(const Napi::CallbackInfo &info)
+    {
+        int result = asphodel_restart_remote_app_blocking(this->device);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
+    }
+
+
+
+    Napi::Value getRemoteStatus(const Napi::CallbackInfo &info)
+    {
+        int connected;
+        uint32_t serial;
+        uint8_t proty;
+        int result = asphodel_get_remote_status_blocking(this->device, &connected, &serial, &proty);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::Object ob = Napi::Object::New(info.Env());
+        ob.Set("connected", connected);
+        ob.Set("serial", serial);
+        ob.Set("protocol_type", proty);
+        return ob;
+    }
+
+
+   Napi::Value restartRemote(const Napi::CallbackInfo &info)
+    {
+        int result = asphodel_restart_remote_blocking(this->device);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
+    }
+
+
+    Napi::Value stopRemote(const Napi::CallbackInfo &info)
+    {
+        int result = asphodel_stop_remote_blocking(this->device);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
+    }
+
+
+    Napi::Value connectRadioBoot(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        int result = asphodel_connect_radio_boot_blocking(this->device, info[0].As<Napi::Number>().Uint32Value());
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
+    }
+
+    Napi::Value startRadioScanBoot(const Napi::CallbackInfo &info)
+    {
+        int result = asphodel_start_radio_scan_boot_blocking(this->device);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
+    }
+
+    Napi::Value getRadioDefaultSerial(const Napi::CallbackInfo &info)
+    {
+        uint32_t serial;
+        int result = asphodel_get_radio_default_serial_blocking(this->device, &serial);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Number::From(info.Env(), serial);
+    }
+
+    Napi::Value getRadioCtrlVars(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+
+        uint8_t length = info[0].As<Napi::Number>().Int32Value();
+        Napi::Uint8Array buf = Napi::Uint8Array::New(info.Env(), length);
+
+        int result = asphodel_get_radio_ctrl_vars_blocking(this->device, buf.Data(), &length);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+
+        Napi::Object ob = Napi::Object::New(info.Env());
+        ob.Set("result", buf);
+        ob.Set("length", length);
+        return ob;
+    }
+
+    Napi::Value getRadioStatus(const Napi::CallbackInfo &info)
+    {
+        int connected;
+        uint32_t serial;
+        uint8_t proty;
+        int scannin;
+        int result = asphodel_get_radio_status_blocking(this->device, &connected, &serial, &proty, &scannin);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::Object ob = Napi::Object::New(info.Env());
+        ob.Set("connected", connected);
+        ob.Set("serial", serial);
+        ob.Set("protocol_type", proty);
+        ob.Set("scanning", scannin);
+        return ob;
+    }
+
+    Napi::Value connectRadio(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        uint32_t serial = info[0].As<Napi::Number>().Uint32Value();
+        int result = asphodel_connect_radio_blocking(this->device, serial);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
+    }
+
+    Napi::Value getRadioScanPower(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        Napi::Uint32Array serials = info[0].As<Napi::Uint32Array>();
+        Napi::Int8Array powers = Napi::Int8Array::New(info.Env(), serials.ElementLength());
+        int result = asphodel_get_radio_scan_power_blocking(this->device, serials.Data(), powers.Data(), powers.ByteLength());
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return powers;
+    }
+    //===========================================
+
+    Napi::Value getRawRadioExtraScanResults(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        size_t length = info[0].As<Napi::Number>().Int64Value();
+        AsphodelExtraScanResult_t *arr = new AsphodelExtraScanResult_t[length];
+        int result = asphodel_get_raw_radio_extra_scan_results_blocking(this->device, arr, &length);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::Array buf = Napi::Array::New(info.Env(), length);
+
+        for (size_t i = 0; i < length; i++)
+        {
+            Napi::Object ob = Napi::Object::New(info.Env());
+
+            ob.Set("asphodel_type", arr[i].asphodel_type);
+            ob.Set("device_mode", arr[i].device_mode);
+            ob.Set("serial_number", arr[i].serial_number);
+        }
+
+        delete[] arr;
+        return buf;
+    }
+
+    Napi::Value getRadioExtraScanResults(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        size_t length = info[0].As<Napi::Number>().Int64Value();
+        AsphodelExtraScanResult_t *arr = nullptr;
+        int result = asphodel_get_radio_extra_scan_results_blocking(this->device, &arr, &length);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::Array buf = Napi::Array::New(info.Env(), length);
+
+        for (size_t i = 0; i < length; i++)
+        {
+            Napi::Object ob = Napi::Object::New(info.Env());
+
+            ob.Set("asphodel_type", arr[i].asphodel_type);
+            ob.Set("device_mode", arr[i].device_mode);
+            ob.Set("serial_number", arr[i].serial_number);
+        }
+
+        // memcpy(buf.Data(), arr, length * (sizeof(uint32_t)));
+        asphodel_free_radio_extra_scan_results(arr);
+        return buf;
+    }
+
+    Napi::Value getRadioScanResults(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        size_t length = info[0].As<Napi::Number>().Int64Value();
+        uint32_t *arr = nullptr;
+        int result = asphodel_get_radio_scan_results_blocking(this->device, &arr, &length);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::Uint32Array buf = Napi::Uint32Array::New(info.Env(), length);
+        memcpy(buf.Data(), arr, length * (sizeof(uint32_t)));
+        asphodel_free_radio_scan_results(arr);
+        return buf;
+    }
+
+    Napi::Value getRawRadioScanResults(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        size_t length = info[0].As<Napi::Number>().Int64Value();
+        uint32_t *arr = new uint32_t[length];
+        int result = asphodel_get_raw_radio_scan_results_blocking(this->device, arr, &length);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::Uint32Array buf = Napi::Uint32Array::New(info.Env(), length);
+        memcpy(buf.Data(), arr, length * (sizeof(uint32_t)));
+        delete[] arr;
+        return buf;
+    }
+
+    Napi::Value startRadioScan(const Napi::CallbackInfo &info)
+    {
+        int result = asphodel_start_radio_scan_blocking(this->device);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
+    }
+
+    Napi::Value stopRadio(const Napi::CallbackInfo &info)
+    {
+        int result = asphodel_stop_radio_blocking(this->device);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
     }
 
     Napi::Value getTcpAdV(const Napi::CallbackInfo &info)
