@@ -75,9 +75,16 @@ type Device = {
     getTransportType: ()=>string,
 }
 
+export const getErrorName: (err:number) =>string = asp.getErrorName
+export const getUnitTypeName: (t: number)=>string = asp.getUnitTypeName
+export const getUnitTypeCount: ()=>number= asp.getUnitTypeCount
+export const getSettingTypeName: (s:number)=>string = asp.getSettingTypeName
+export const getSettingTypeCount: ()=>number = asp.getSettingTypeCount
+export const getChannelTypeName: (c:number)=>string = asp.getChannelTypeName
+export const getChannelTypeCount: ()=>number = asp.getChannelTypeCount
 
 export const USBInit: ()=>void = asp.USBInit
 export const USBDeInit: ()=>void = asp.USBDeInit
 export const USBPollDevices: (millis: number)=>void = asp.USBPollDevices
 export const USBFindDevices: ()=>Device[] = asp.USBFindDevices
-export const USBGetBackenVersion: ()=>void = asp.USBGetBackenVersion
+export const USBGetBackendVersion: ()=>void = asp.USBGetBackenVersion

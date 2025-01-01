@@ -3,7 +3,6 @@
 #include <optional>
 #include <thread>
 
-int cow = 0;
 
 class DeviceWrapper : public Napi::ObjectWrap<DeviceWrapper>
 {

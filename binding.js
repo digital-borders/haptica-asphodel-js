@@ -6,7 +6,7 @@ asp.USBInit()
 let devices = asp.USBFindDevices();
 //devices[0].close();
 
-console.log(asp)
+console.log(asp.getErrorName(0))
 
 //console.log(asp)
 
