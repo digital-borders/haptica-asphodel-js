@@ -3,3 +3,4 @@ build
 haptica-asphodel-js.js
 index.js
 index.ts
+binding.js

@@ -276,7 +276,7 @@ enum TCPFilter {
 
 export const TCPInit: () => void = asp.TCPInit
 export const TCPDevicesSupported: () => boolean = asp.TCPDevicesSupported
-export const TCPDeinit: () => void = asp.TCPDeinit
+export const TCPDeinit: () => void = asp.TCPDeInit
 export const TCPFindDevices: () => Device[] = asp.TCPFindDevices
 export const TCPFindDevicesFilter: (filter: TCPFilter) => Device[] = asp.TCPFindDevicesFilter
 export const TCPPollDevices: (millis: number) => void = asp.TCPPollDevices
