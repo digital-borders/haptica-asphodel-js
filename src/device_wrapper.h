@@ -1,5 +1,6 @@
 #include <../asphodel-headers/asphodel.h>
 #include <napi.h>
+#include "decoders.h"
 
 class DeviceWrapper : public Napi::ObjectWrap<DeviceWrapper>
 {
@@ -289,43 +290,17 @@ public:
             Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
         }
         int index = info[0].As<Napi::Number>().Int32Value();
-        AsphodelChannelInfo_t channel;
-        int result = asphodel_get_channel_info_blocking(this->device, index, &channel);
+        AsphodelChannelInfo_t *channel = new AsphodelChannelInfo_t();
+        int result = asphodel_get_channel_info_blocking(this->device, index, channel);
         if (result != 0)
         {
             Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
         }
+        Napi::Function constr = ChannelInfo::GetClass(info.Env());
         Napi::Object ob = Napi::Object::New(info.Env());
-
-        ob.Set("bits_per_sample", channel.bits_per_sample);
-        ob.Set("channel_type", channel.channel_type);
-
-        Napi::Array chunks = Napi::Array::New(info.Env(), channel.chunk_count);
-
-        for (int i = 0; i < channel.chunk_count; i++)
-        {
-            Napi::Uint8Array chunk = Napi::Uint8Array::New(info.Env(), channel.chunk_lengths[i]);
-            memcpy(chunk.Data(), channel.chunks[i], channel.chunk_lengths[i]);
-            chunks[i] = chunk;
-        }
-        ob.Set("chunks", chunks);
-
-        Napi::Float32Array coefs = Napi::Float32Array::New(info.Env(), channel.coefficients_length);
-        for (int i = 0; i < channel.coefficients_length; i++)
-        {
-            coefs[i] = channel.coefficients[i];
-        }
-        ob.Set("coefficients", coefs);
-        ob.Set("data_bits", channel.data_bits);
-        ob.Set("filler_bits", channel.filler_bits);
-        ob.Set("maximum", channel.maximum);
-        ob.Set("minimum", channel.minimum);
-        ob.Set("resolution", channel.resolution);
-        ob.Set("samples", channel.samples);
-        ob.Set("unit_type", channel.unit_type);
-        ob.Set("name", Napi::String::New(info.Env(), (char *)channel.name, channel.name_length));
-
-        return ob;
+        ob.Set("info", Napi::External<AsphodelChannelInfo_t>::New(info.Env(), channel));
+        ob.Set("tofree", false);
+        return constr.Call({ob});
     }
 
     Napi::Value getChannelName(const Napi::CallbackInfo &info)
@@ -359,37 +334,11 @@ public:
         {
             Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
         }
+        Napi::Function constr = ChannelInfo::GetClass(info.Env());
         Napi::Object ob = Napi::Object::New(info.Env());
-
-        ob.Set("bits_per_sample", channel->bits_per_sample);
-        ob.Set("channel_type", channel->channel_type);
-
-        Napi::Array chunks = Napi::Array::New(info.Env(), channel->chunk_count);
-
-        for (int i = 0; i < channel->chunk_count; i++)
-        {
-            Napi::Uint8Array chunk = Napi::Uint8Array::New(info.Env(), channel->chunk_lengths[i]);
-            memcpy(chunk.Data(), channel->chunks[i], channel->chunk_lengths[i]);
-            chunks[i] = chunk;
-        }
-        ob.Set("chunks", chunks);
-
-        Napi::Float32Array coefs = Napi::Float32Array::New(info.Env(), channel->coefficients_length);
-        for (int i = 0; i < channel->coefficients_length; i++)
-        {
-            coefs[i] = channel->coefficients[i];
-        }
-        ob.Set("coefficients", coefs);
-        ob.Set("data_bits", channel->data_bits);
-        ob.Set("filler_bits", channel->filler_bits);
-        ob.Set("maximum", channel->maximum);
-        ob.Set("minimum", channel->minimum);
-        ob.Set("resolution", channel->resolution);
-        ob.Set("samples", channel->samples);
-        ob.Set("unit_type", channel->unit_type);
-        ob.Set("name", Napi::String::New(info.Env(), (char *)channel->name, channel->name_length));
-        asphodel_free_channel(channel);
-        return ob;
+        ob.Set("info", Napi::External<AsphodelChannelInfo_t>::New(info.Env(), channel));
+        ob.Set("tofree", true);
+        return constr.Call({ob});
     }
 
     Napi::Value getChannelCount(const Napi::CallbackInfo &info)
@@ -489,26 +438,17 @@ public:
         }
 
         int index = info[0].As<Napi::Number>().Int32Value();
-        AsphodelStreamInfo_t stream;
-        int result = asphodel_get_stream_format_blocking(this->device, index, &stream);
+        AsphodelStreamInfo_t *stream = new AsphodelStreamInfo_t();
+        int result = asphodel_get_stream_format_blocking(this->device, index, stream);
         if (result != 0)
         {
             Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
         }
-
+        Napi::Function constr = StreamInfo::GetClass(info.Env());
         Napi::Object ob = Napi::Object::New(info.Env());
-
-        ob.Set("channel_count", stream.channel_count);
-        auto a = Napi::Uint8Array::New(info.Env(), stream.channel_count);
-        memcpy(a.Data(), stream.channel_index_list, stream.channel_count);
-        ob.Set("channel_index_list", a);
-        ob.Set("counter_bits", stream.counter_bits);
-        ob.Set("filler_bits", stream.filler_bits);
-        ob.Set("rate", stream.rate);
-        ob.Set("rate_error", stream.rate_error);
-        ob.Set("warm_up_delay", stream.warm_up_delay);
-
-        return ob;
+        ob.Set("info", Napi::External<AsphodelStreamInfo_t>::New(info.Env(), stream));
+        ob.Set("tofree", true);
+        return constr.Call({ob});
     }
 
     Napi::Value getStreamChannels(const Napi::CallbackInfo &info)
@@ -547,19 +487,11 @@ public:
         {
             Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
         }
-
+        Napi::Function constr = StreamInfo::GetClass(info.Env());
         Napi::Object ob = Napi::Object::New(info.Env());
-        ob.Set("channel_count", stream->channel_count);
-        auto a = Napi::Uint8Array::New(info.Env(), stream->channel_count);
-        memcpy(a.Data(), stream->channel_index_list, stream->channel_count);
-        ob.Set("channel_index_list", a);
-        ob.Set("counter_bits", stream->counter_bits);
-        ob.Set("filler_bits", stream->filler_bits);
-        ob.Set("rate", stream->rate);
-        ob.Set("rate_error", stream->rate_error);
-        ob.Set("warm_up_delay", stream->warm_up_delay);
-        asphodel_free_stream(stream);
-        return ob;
+        ob.Set("info", Napi::External<AsphodelStreamInfo_t>::New(info.Env(), stream));
+        ob.Set("tofree", false);
+        return constr.Call({ob});
     }
 
     Napi::Value getStreamCount(const Napi::CallbackInfo &info)
