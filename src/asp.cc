@@ -292,7 +292,7 @@ Napi::Object Init(Napi::Env env, Napi::Object exports)
     exports.Set(Napi::String::New(env, "USBFindDevices"), Napi::Function::New(env, USBFindDevices));
     exports.Set(Napi::String::New(env, "USBGetBackendVersion"), Napi::Function::New(env, USBGetBackendVersion));
     exports.Set(Napi::String::New(env, "USBInit"), Napi::Function::New(env, InitUSB));
-    exports.Set(Napi::String::New(env, "USBDeinit"), Napi::Function::New(env, DeinitUSB));
+    exports.Set(Napi::String::New(env, "USBDeInit"), Napi::Function::New(env, DeinitUSB));
     exports.Set(Napi::String::New(env, "USBPollDevices"), Napi::Function::New(env, PollUSBDevices));
 
     exports.Set(Napi::String::New(env, "getErrorName"), Napi::Function::New(env, getErrorName));
@@ -305,7 +305,7 @@ Napi::Object Init(Napi::Env env, Napi::Object exports)
 
     exports.Set(Napi::String::New(env, "TCPInit"), Napi::Function::New(env, InitTCP));
     exports.Set(Napi::String::New(env, "TCPDevicesSupported"), Napi::Function::New(env, TCPDevicesSupported));
-    exports.Set(Napi::String::New(env, "TCPDeinit"), Napi::Function::New(env, DeinitTCP));
+    exports.Set(Napi::String::New(env, "TCPDeInit"), Napi::Function::New(env, DeinitTCP));
     exports.Set(Napi::String::New(env, "TCPFindDevices"), Napi::Function::New(env, TCPFindDevices));
     exports.Set(Napi::String::New(env, "TCPFindDevicesFilter"), Napi::Function::New(env, TCPFindDevicesFilter));
     exports.Set(Napi::String::New(env, "TCPPollDevices"), Napi::Function::New(env, PollTCPDevices));
