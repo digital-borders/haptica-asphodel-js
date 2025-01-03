@@ -86,7 +86,10 @@ type StreamAndChannels = {
 export const StreamAndChannels: StreamAndChannels = asp.StreamAndChannels;
 
 type UnitFormatter = {
-    new(unit_type:number, minimum:number, maximum:number, resolution:number, use_metric: boolean): any
+    new(unit_type:number, minimum:number, maximum:number, resolution:number, use_metric: boolean): any,
+    FormatBare: (buffer_size:number, value:number)=>Uint8Array,
+    FormatAscii: (buffer_size:number, value:number)=>Uint8Array,
+    FormatHtml: (buffer_size:number, value:number)=>Uint8Array,
 }
 
 export const UnitFormatter: UnitFormatter = asp.UnitFormatter;

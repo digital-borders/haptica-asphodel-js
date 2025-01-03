@@ -449,7 +449,7 @@ public:
         {
             Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
         }
-        return Napi::Value();
+        return buf;
     }
 
     Napi::Value formatAscii(const Napi::CallbackInfo &info)
@@ -468,7 +468,7 @@ public:
         {
             Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
         }
-        return Napi::Value();
+        return buf;
     }
 
     Napi::Value formatHtml(const Napi::CallbackInfo &info)
@@ -487,7 +487,7 @@ public:
         {
             Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
         }
-        return Napi::Value();
+        return buf;
     }
 };
 
