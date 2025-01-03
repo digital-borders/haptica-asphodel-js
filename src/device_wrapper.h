@@ -215,13 +215,239 @@ public:
                                              InstanceMethod("getSupplyInfo", &DeviceWrapper::getSupplyInfo),
                                              InstanceMethod("checkSupply", &DeviceWrapper::checkSupply),
 
+                                             InstanceMethod("getSettingCount", &DeviceWrapper::getSettingCount),
+                                             InstanceMethod("getSettingName", &DeviceWrapper::getSettingName),
+                                             InstanceMethod("getSettingInfo", &DeviceWrapper::getSettingInfo),
+                                             InstanceMethod("getSettingDefault", &DeviceWrapper::getSettingDefault),
+                                             InstanceMethod("getCustomEnumCounts", &DeviceWrapper::getCustomEnumCounts),
+                                             InstanceMethod("getCustomEnumValueName", &DeviceWrapper::getCustomEnumValueName),
+                                             InstanceMethod("getSettingCategoryCount", &DeviceWrapper::getSettingCategoryCount),
+                                             InstanceMethod("getSettingCategoryName", &DeviceWrapper::getSettingCategoryName),
+                                             InstanceMethod("getSettingCategorySettings", &DeviceWrapper::getSettingCategorySettings),
+
                                          });
 
         return fun;
     }
 
+    Napi::Value getSettingCategorySettings(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 2)
+        {
+            Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        uint8_t length = info[1].As<Napi::Number>().Uint32Value();
+        Napi::Uint8Array arr = Napi::Uint8Array::New(info.Env(), length);
+        int result = asphodel_get_setting_category_settings_blocking(this->device, index, arr.Data(), &length);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::Object ob = Napi::Object::New(info.Env());
+        ob.Set("result", arr);
+        ob.Set("length", length);
+        return ob;
+    }
 
-        Napi::Value checkSupply(const Napi::CallbackInfo &info)
+    Napi::Value getSettingCategoryName(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        uint8_t length = 128;
+        char name[129];
+        int result = asphodel_get_setting_category_name_blocking(this->device, index, name, &length);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::String s = Napi::String::New(info.Env(), name, length);
+        return s;
+    }
+
+    Napi::Value getSettingCategoryCount(const Napi::CallbackInfo &info)
+    {
+        int count = 0;
+        int result = asphodel_get_setting_category_count_blocking(this->device, &count);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Number::New(info.Env(), count);
+    }
+
+    Napi::Value getCustomEnumValueName(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 2)
+        {
+            Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        int value = info[1].As<Napi::Number>().Int32Value();
+        uint8_t length = 128;
+        char name[129];
+        int result = asphodel_get_custom_enum_value_name_blocking(this->device, index, value, name, &length);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::String s = Napi::String::New(info.Env(), name, length);
+        return s;
+    }
+
+    Napi::Value getCustomEnumCounts(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        uint8_t length = info[0].As<Napi::Number>().Uint32Value();
+        Napi::Uint8Array arr = Napi::Uint8Array::New(info.Env(), length);
+        int result = asphodel_get_custom_enum_counts_blocking(this->device, arr.Data(), &length);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::Object ob = Napi::Object::New(info.Env());
+        ob.Set("result", arr);
+        ob.Set("length", length);
+        return ob;
+    }
+
+    Napi::Value getSettingDefault(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 2)
+        {
+            Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        uint8_t length = info[1].As<Napi::Number>().Uint32Value();
+        Napi::Uint8Array arr = Napi::Uint8Array::New(info.Env(), length);
+        int result = asphodel_get_setting_default_blocking(this->device, index, arr.Data(), &length);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+
+        Napi::Object ob = Napi::Object::New(info.Env());
+        ob.Set("result", arr);
+        ob.Set("length", length);
+        return ob;
+    }
+
+    Napi::Value getSettingInfo(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        AsphodelSettingInfo_t in = {};
+        int result = asphodel_get_setting_info_blocking(this->device, index, &in);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::Object ob = Napi::Object::New(info.Env());
+
+        switch (in.setting_type)
+        {
+        case SETTING_TYPE_BYTE:
+            ob.Set("nvm_word", in.u.byte_setting.nvm_word);
+            ob.Set("nvm_word_byte", in.u.byte_setting.nvm_word_byte);
+            break;
+        case SETTING_TYPE_BYTE_ARRAY:
+            ob.Set("length_nvm_word", in.u.byte_array_setting.length_nvm_word);
+            ob.Set("maximum_length", in.u.byte_array_setting.maximum_length);
+            ob.Set("length_nvm_word_byte", in.u.byte_array_setting.length_nvm_word_byte);
+            ob.Set("nvm_word", in.u.byte_array_setting.nvm_word);
+            break;
+        case SETTING_TYPE_STRING:
+            ob.Set("maximum_length", in.u.string_setting.maximum_length);
+            ob.Set("nvm_word", in.u.string_setting.nvm_word);
+            break;
+        case SETTING_TYPE_INT32:
+            ob.Set("maximum", in.u.int32_setting.maximum);
+            ob.Set("minimum", in.u.int32_setting.minimum);
+            ob.Set("nvm_word", in.u.int32_setting.nvm_word);
+            break;
+        case SETTING_TYPE_INT32_SCALED:
+            ob.Set("maximum", in.u.int32_scaled_setting.maximum);
+            ob.Set("minimum", in.u.int32_scaled_setting.minimum);
+            ob.Set("nvm_word", in.u.int32_scaled_setting.nvm_word);
+            ob.Set("offset", in.u.int32_scaled_setting.offset);
+            ob.Set("scale", in.u.int32_scaled_setting.scale);
+            ob.Set("unit_type", in.u.int32_scaled_setting.unit_type);
+            break;
+        case SETTING_TYPE_FLOAT:
+            ob.Set("maximum", in.u.float_setting.maximum);
+            ob.Set("minimum", in.u.float_setting.minimum);
+            ob.Set("nvm_word", in.u.float_setting.nvm_word);
+            ob.Set("offset", in.u.float_setting.offset);
+            ob.Set("scale", in.u.float_setting.scale);
+            ob.Set("unit_type", in.u.float_setting.unit_type);
+            break;
+        case SETTING_TYPE_FLOAT_ARRAY:
+            ob.Set("length_nvm_word", in.u.float_array_setting.length_nvm_word);
+            ob.Set("length_nvm_word_byte", in.u.float_array_setting.length_nvm_word_byte);
+            ob.Set("maximum", in.u.float_array_setting.maximum);
+            ob.Set("maximum_length", in.u.float_array_setting.maximum_length);
+            ob.Set("minimum", in.u.float_array_setting.minimum);
+            ob.Set("nvm_word", in.u.float_array_setting.nvm_word);
+            ob.Set("offset", in.u.float_array_setting.offset);
+            ob.Set("scale", in.u.float_array_setting.scale);
+            ob.Set("unit_type", in.u.float_array_setting.unit_type);
+            break;
+        case SETTING_TYPE_CUSTOM_ENUM:
+            ob.Set("custom_enum_index", in.u.custom_enum_setting.custom_enum_index);
+            ob.Set("nvm_word", in.u.custom_enum_setting.nvm_word);
+            ob.Set("nvm_word_byte", in.u.custom_enum_setting.nvm_word_byte);
+            break;
+
+        default:
+            break;
+        }
+        ob.Set("name", Napi::String::New(info.Env(), (char *)in.name, in.name_length));
+        Napi::Uint8Array arr = Napi::Uint8Array::New(info.Env(), in.default_bytes_length);
+        memcpy(arr.Data(), in.default_bytes, in.default_bytes_length);
+        ob.Set("default_bytes", arr);
+        ob.Set("setting_type", in.setting_type);
+        return ob;
+    }
+
+    Napi::Value getSettingName(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        uint8_t length = 128;
+        char name[129];
+        int result = asphodel_get_setting_name_blocking(this->device, index, name, &length);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::String s = Napi::String::New(info.Env(), name, length);
+        return s;
+    }
+
+    Napi::Value getSettingCount(const Napi::CallbackInfo &info)
+    {
+        int count = 0;
+        int result = asphodel_get_setting_count_blocking(this->device, &count);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Number::New(info.Env(), count);
+    }
+
+    Napi::Value checkSupply(const Napi::CallbackInfo &info)
     {
         if (info.Length() != 2)
         {
@@ -242,14 +468,14 @@ public:
         return ob;
     }
 
-        Napi::Value getSupplyInfo(const Napi::CallbackInfo &info)
+    Napi::Value getSupplyInfo(const Napi::CallbackInfo &info)
     {
         if (info.Length() != 1)
         {
             Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
         }
         int index = info[0].As<Napi::Number>().Int32Value();
-        AsphodelSupplyInfo_t in;
+        AsphodelSupplyInfo_t in = {};
         int result = asphodel_get_supply_info_blocking(this->device, index, &in);
         if (result != 0)
         {
@@ -324,7 +550,6 @@ public:
         {
             Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
         }
-
         Napi::Object ob = Napi::Object::New(info.Env());
         ob.Set("result", arr);
         ob.Set("length", length);
@@ -396,7 +621,7 @@ public:
             Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
         }
         int index = info[0].As<Napi::Number>().Int32Value();
-        AsphodelCtrlVarInfo_t in;
+        AsphodelCtrlVarInfo_t in = {};
         int result = asphodel_get_ctrl_var_info_blocking(this->device, index, &in);
         if (result != 0)
         {

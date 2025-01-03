@@ -315,7 +315,27 @@ type Device = {
     checkSupply:(index:number, tries:number)=>{
         measurement: number,
         result: number
-    }
+    },
+
+
+    getSettingCount:()=>number,
+    getSettingName:(index: number)=>string,
+    getSettingInfo:(index: number)=>any
+    getSettingDefault:(index:number)=>{
+        result: Uint8Array,
+        length: number
+    },
+    getCustomEnumCounts:(length: number)=>{
+        result: Uint8Array,
+        length: number
+    },
+    getCustomEnumValueName: (index:number, value:number)=>string,
+    getSettingCategoryCount:()=>number,
+    getSettingCategoryName:(index:number)=>string,
+    getSettingCategorySettings:(index:number, length:number)=>{
+        result: Uint8Array,
+        length: number
+    },
 
 }
 
