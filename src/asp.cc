@@ -44,7 +44,8 @@ Napi::Value USBGetBackendVersion(const Napi::CallbackInfo &info)
 
 Napi::Value USBFindDevices(const Napi::CallbackInfo &info)
 {
-    if(info.Length()!=1) {
+    if (info.Length() != 1)
+    {
         Napi::Error::New(info.Env(), "Expect one Argument").ThrowAsJavaScriptException();
     }
 
@@ -163,8 +164,8 @@ Napi::Value TCPDevicesSupported(const Napi::CallbackInfo &info)
 Napi::Value TCPFindDevices(const Napi::CallbackInfo &info)
 {
 
-
-    if(info.Length()!=1) {
+    if (info.Length() != 1)
+    {
         Napi::Error::New(info.Env(), "Expect one Argument").ThrowAsJavaScriptException();
     }
 
@@ -347,7 +348,6 @@ Napi::Value createChannelDecoder(const Napi::CallbackInfo &info)
     return constr.New({ob});
 }
 
-
 Napi::Value getStreamingCounts(const Napi::CallbackInfo &info)
 {
     if (info.Length() != 3)
@@ -388,6 +388,109 @@ Napi::Value getStreamingCounts(const Napi::CallbackInfo &info)
     return ob;
 }
 
+class UnitFormatter : public Napi::ObjectWrap<UnitFormatter>
+{
+public:
+    AsphodelUnitFormatter_t *formatter;
+    UnitFormatter(const Napi::CallbackInfo &info) : Napi::ObjectWrap<UnitFormatter>(info)
+    {
+        if (info.Length() != 5)
+        {
+            Napi::Error::New(info.Env(), "Expects 5 arguments").ThrowAsJavaScriptException();
+        }
+
+        uint8_t unit_type = info[0].As<Napi::Number>().Uint32Value();
+        double minimum = info[1].As<Napi::Number>().DoubleValue();
+        double maximum = info[2].As<Napi::Number>().DoubleValue();
+        double resolution = info[3].As<Napi::Number>().DoubleValue();
+        int use_metric = info[4].As<Napi::Boolean>().Value();
+
+        this->formatter = NULL;
+        this->formatter = asphodel_create_unit_formatter(unit_type, minimum, maximum, resolution, use_metric);
+
+        if (this->formatter == NULL)
+        {
+            Napi::Error::New(info.Env(), "Failed to create unit formatter").ThrowAsJavaScriptException();
+        }
+    }
+
+    static Napi::Object Init(Napi::Env env, Napi::Object exports)
+    {
+        Napi::Function func = DefineClass(env, "UnitFormatter", {
+                                                                    InstanceMethod("FormatBare", &UnitFormatter::formatBare),
+                                                                    InstanceMethod("FormatAscii", &UnitFormatter::formatAscii),
+                                                                    InstanceMethod("FormatHtml", &UnitFormatter::formatHtml),
+
+                                                                });
+
+        Napi::Object *ob = env.GetInstanceData<Napi::Object>();
+        Napi::FunctionReference *ctor = new Napi::FunctionReference();
+        *ctor = Napi::Persistent(func);
+        ob->Set("UnitFormatterConstructor", Napi::External<Napi::FunctionReference>::New(env, ctor, [](Napi::Env, Napi::FunctionReference *ref)
+                                                                                         { delete ref; }));
+
+        exports.Set("UnitFormatter", func);
+        return exports;
+    }
+
+    Napi::Value formatBare(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 2)
+        {
+            Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
+        }
+        size_t buffer_size = info[0].As<Napi::Number>().Uint32Value();
+        double value = info[1].As<Napi::Number>().DoubleValue();
+
+        Napi::Int8Array buf = Napi::Int8Array::New(info.Env(), buffer_size);
+
+        int result = this->formatter->format_bare(this->formatter, (char *)buf.Data(), buf.ByteLength(), value);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
+    }
+
+    Napi::Value formatAscii(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 2)
+        {
+            Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
+        }
+        size_t buffer_size = info[0].As<Napi::Number>().Uint32Value();
+        double value = info[1].As<Napi::Number>().DoubleValue();
+
+        Napi::Int8Array buf = Napi::Int8Array::New(info.Env(), buffer_size);
+
+        int result = this->formatter->format_ascii(this->formatter, (char *)buf.Data(), buf.ByteLength(), value);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
+    }
+
+    Napi::Value formatHtml(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 2)
+        {
+            Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
+        }
+        size_t buffer_size = info[0].As<Napi::Number>().Uint32Value();
+        double value = info[1].As<Napi::Number>().DoubleValue();
+
+        Napi::Int8Array buf = Napi::Int8Array::New(info.Env(), buffer_size);
+
+        int result = this->formatter->format_html(this->formatter, (char *)buf.Data(), buf.ByteLength(), value);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
+    }
+};
+
 Napi::Object Init(Napi::Env env, Napi::Object exports)
 {
     Napi::Object *s = new Napi::Object();
@@ -398,11 +501,11 @@ Napi::Object Init(Napi::Env env, Napi::Object exports)
 
     exports.Set(Napi::String::New(env, "getStreamingCounts"), Napi::Function::New(env, getStreamingCounts));
 
+    UnitFormatter::Init(env, exports);
 
     exports.Set(Napi::String::New(env, "createChannelDecoder"), Napi::Function::New(env, createChannelDecoder));
     exports.Set(Napi::String::New(env, "createDeviceDecoder"), Napi::Function::New(env, createDeviceDecoder));
     exports.Set(Napi::String::New(env, "createStreamDecoder"), Napi::Function::New(env, createStreamDecoder));
-
 
     exports.Set(Napi::String::New(env, "USBDevicesSupported"), Napi::Function::New(env, USBDevicesSupported));
     exports.Set(Napi::String::New(env, "USBFindDevices"), Napi::Function::New(env, USBFindDevices));

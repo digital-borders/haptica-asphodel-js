@@ -85,7 +85,11 @@ type StreamAndChannels = {
 
 export const StreamAndChannels: StreamAndChannels = asp.StreamAndChannels;
 
+type UnitFormatter = {
+    new(unit_type:number, minimum:number, maximum:number, resolution:number, use_metric: boolean): any
+}
 
+export const UnitFormatter: UnitFormatter = asp.UnitFormatter;
 
 type Device = {
     close: () => void,

@@ -224,7 +224,6 @@ public:
                                              InstanceMethod("getSettingCategoryCount", &DeviceWrapper::getSettingCategoryCount),
                                              InstanceMethod("getSettingCategoryName", &DeviceWrapper::getSettingCategoryName),
                                              InstanceMethod("getSettingCategorySettings", &DeviceWrapper::getSettingCategorySettings),
-
                                          });
 
         return fun;
