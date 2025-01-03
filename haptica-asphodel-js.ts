@@ -271,7 +271,7 @@ type Device = {
         page_info: number,
         length: number
     },
-    getBootloaderBlockSizes: () => Uint16Array,
+    getBootloaderBlockSizes: (length: number) => Uint16Array,
     startBootloaderPage: (page_number: number, nonce: Uint8Array) => void,
     writeBootloaderCodeBlock: (data: Uint8Array) => number,
     writeBootloaderPage: (data: Uint8Array, block_sizes: Uint16Array) => void,
@@ -294,6 +294,28 @@ type Device = {
     getCtrlVar:(index:number)=>number,
     setCtrlVar:(index:number, value:number)=>void,
 
+    enableRfPower: (enable: boolean)=>void,
+    getRfPowerStatus:()=> number,
+    getRfPowerCtlVars: (length: number)=>{
+        result: Uint8Array,
+        length: number
+    },
+    resetRfPowerTimeout:(timeout: number)=>void,
+
+    getSupplyCount: ()=>number,
+    getSupplyName: (index:number)=>string,
+    getSupplyInfo: (index:number)=>{
+        is_battery: number,
+        nominal: number,
+        offset: number,
+        scale: number,
+        unit_type: number,
+        name: string,
+    },
+    checkSupply:(index:number, tries:number)=>{
+        measurement: number,
+        result: number
+    }
 
 }
 
@@ -324,8 +346,8 @@ enum TCPFilter {
 export const TCPInit: () => void = asp.TCPInit
 export const TCPDevicesSupported: () => boolean = asp.TCPDevicesSupported
 export const TCPDeinit: () => void = asp.TCPDeInit
-export const TCPFindDevices: () => Device[] = asp.TCPFindDevices
-export const TCPFindDevicesFilter: (filter: TCPFilter) => Device[] = asp.TCPFindDevicesFilter
+export const TCPFindDevices: (length: number) => Device[] = asp.TCPFindDevices
+export const TCPFindDevicesFilter: (filter: TCPFilter, length: number) => Device[] = asp.TCPFindDevicesFilter
 export const TCPPollDevices: (millis: number) => void = asp.TCPPollDevices
 export const TCPCreateDevice: (host: string, port: number, timeout: number, serial: string) => Device = asp.TCPCreateDevice
 

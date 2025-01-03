@@ -44,18 +44,16 @@ Napi::Value USBGetBackendVersion(const Napi::CallbackInfo &info)
 
 Napi::Value USBFindDevices(const Napi::CallbackInfo &info)
 {
-    size_t n;
-    int result = asphodel_usb_find_devices(nullptr, &n);
-    if (result != 0)
-    {
-        Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+    if(info.Length()!=1) {
+        Napi::Error::New(info.Env(), "Expect one Argument").ThrowAsJavaScriptException();
     }
-    // to remove
-    // n = 1;
+
+    size_t n = info[0].As<Napi::Number>().Uint32Value();
+
     AsphodelDevice_t **devices = new AsphodelDevice_t *[n];
     // to remove
     // devices[0] = new AsphodelDevice_t();
-    result = asphodel_usb_find_devices(devices, &n);
+    int result = asphodel_usb_find_devices(devices, &n);
     // to remove
     // n = 1;
     if (result != 0)
@@ -164,18 +162,20 @@ Napi::Value TCPDevicesSupported(const Napi::CallbackInfo &info)
 
 Napi::Value TCPFindDevices(const Napi::CallbackInfo &info)
 {
-    size_t n;
-    int result = asphodel_tcp_find_devices(nullptr, &n);
-    if (result != 0)
-    {
-        Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+
+
+    if(info.Length()!=1) {
+        Napi::Error::New(info.Env(), "Expect one Argument").ThrowAsJavaScriptException();
     }
+
+    size_t n = info[0].As<Napi::Number>().Uint32Value();
+
     // to remove
     // n = 1;
     AsphodelDevice_t **devices = new AsphodelDevice_t *[n];
     // to remove
     // devices[0] = new AsphodelDevice_t();
-    result = asphodel_tcp_find_devices(devices, &n);
+    int result = asphodel_tcp_find_devices(devices, &n);
     // to remove
     // n = 1;
     if (result != 0)
@@ -198,23 +198,19 @@ Napi::Value TCPFindDevices(const Napi::CallbackInfo &info)
 
 Napi::Value TCPFindDevicesFilter(const Napi::CallbackInfo &info)
 {
-    if (info.Length() != 1)
+    if (info.Length() != 2)
     {
-        Napi::Error::New(info.Env(), "Expect one Argument").ThrowAsJavaScriptException();
+        Napi::Error::New(info.Env(), "Expect 2 Argument").ThrowAsJavaScriptException();
     }
     uint32_t filter = info[0].As<Napi::Number>().Uint32Value();
-    size_t n;
-    int result = asphodel_tcp_find_devices_filter(nullptr, &n, filter);
-    if (result != 0)
-    {
-        Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
-    }
+    size_t n = info[1].As<Napi::Number>().Uint32Value();
+
     // to remove
     // n = 1;
     AsphodelDevice_t **devices = new AsphodelDevice_t *[n];
     // to remove
     // devices[0] = new AsphodelDevice_t();
-    result = asphodel_tcp_find_devices_filter(devices, &n, filter);
+    int result = asphodel_tcp_find_devices_filter(devices, &n, filter);
     // to remove
     // n = 1;
     if (result != 0)

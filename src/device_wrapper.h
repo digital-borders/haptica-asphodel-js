@@ -205,9 +205,156 @@ public:
                                              InstanceMethod("getCtrlVar", &DeviceWrapper::getCtrlVar),
                                              InstanceMethod("setCtrlVar", &DeviceWrapper::setCtrlVar),
 
+                                             InstanceMethod("enableRfPower", &DeviceWrapper::enableRfPower),
+                                             InstanceMethod("getRfPowerStatus", &DeviceWrapper::getRfPowerStatus),
+                                             InstanceMethod("getRfPowerCtlVars", &DeviceWrapper::getRfPowerCtlVars),
+                                             InstanceMethod("resetRfPowerTimeout", &DeviceWrapper::resetRfPowerTimeout),
+
+                                             InstanceMethod("getSupplyCount", &DeviceWrapper::getSupplyCount),
+                                             InstanceMethod("getSupplyName", &DeviceWrapper::getSupplyName),
+                                             InstanceMethod("getSupplyInfo", &DeviceWrapper::getSupplyInfo),
+                                             InstanceMethod("checkSupply", &DeviceWrapper::checkSupply),
+
                                          });
 
         return fun;
+    }
+
+
+        Napi::Value checkSupply(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 2)
+        {
+            Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        int tries = info[1].As<Napi::Number>().Int32Value();
+        int32_t measurements = 0;
+        uint8_t res = 0;
+        int result = asphodel_check_supply_blocking(this->device, index, &measurements, &res, tries);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::Object ob = Napi::Object::New(info.Env());
+        ob.Set("measurement", measurements);
+        ob.Set("result", res);
+        return ob;
+    }
+
+        Napi::Value getSupplyInfo(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        AsphodelSupplyInfo_t in;
+        int result = asphodel_get_supply_info_blocking(this->device, index, &in);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::Object ob = Napi::Object::New(info.Env());
+
+        ob.Set("is_battery", in.is_battery);
+        ob.Set("nominal", in.nominal);
+        ob.Set("offset", in.offset);
+        ob.Set("scale", in.scale);
+        ob.Set("unit_type", in.unit_type);
+        ob.Set("name", Napi::String::New(info.Env(), (char *)in.name, in.name_length));
+
+        return ob;
+    }
+
+    Napi::Value getSupplyName(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        uint8_t length = 128;
+        char name[129];
+        int result = asphodel_get_supply_name_blocking(this->device, index, name, &length);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::String s = Napi::String::New(info.Env(), name, length);
+        return s;
+    }
+
+    Napi::Value getSupplyCount(const Napi::CallbackInfo &info)
+    {
+        int count = 0;
+        int result = asphodel_get_supply_count_blocking(this->device, &count);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Number::New(info.Env(), count);
+    }
+
+    Napi::Value resetRfPowerTimeout(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        uint32_t timeout = info[0].As<Napi::Number>().Uint32Value();
+        int result = asphodel_reset_rf_power_timeout_blocking(this->device, timeout);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
+    }
+
+    Napi::Value getRfPowerCtlVars(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        uint8_t length = info[0].As<Napi::Number>().Uint32Value();
+        Napi::Uint8Array arr = Napi::Uint8Array::New(info.Env(), length);
+        int result = asphodel_get_rf_power_ctrl_vars_blocking(this->device, arr.Data(), &length);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+
+        Napi::Object ob = Napi::Object::New(info.Env());
+        ob.Set("result", arr);
+        ob.Set("length", length);
+        return ob;
+    }
+
+    Napi::Value getRfPowerStatus(const Napi::CallbackInfo &info)
+    {
+        int enable = 0;
+        int result = asphodel_get_rf_power_status_blocking(this->device, &enable);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Number::New(info.Env(), enable);
+    }
+
+    Napi::Value enableRfPower(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        int enable = info[0].As<Napi::Boolean>().Value();
+        int result = asphodel_enable_rf_power_blocking(this->device, enable);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
     }
 
     Napi::Value setCtrlVar(const Napi::CallbackInfo &info)
@@ -217,7 +364,7 @@ public:
             Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
         }
         int index = info[0].As<Napi::Number>().Int32Value();
-        int32_t value = info[0].As<Napi::Number>().Int32Value();
+        int32_t value = info[1].As<Napi::Number>().Int32Value();
         int result = asphodel_set_ctrl_var_blocking(this->device, index, value);
         if (result != 0)
         {
@@ -272,20 +419,14 @@ public:
             Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
         }
         int index = info[0].As<Napi::Number>().Int32Value();
-        uint8_t length = 0;
-        int result = asphodel_get_ctrl_var_name_blocking(this->device, index, nullptr, &length);
-        if (result != 0)
-        {
-            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
-        }
-        char *name = new char[length];
-        result = asphodel_get_ctrl_var_name_blocking(this->device, index, name, &length);
+        uint8_t length = 128;
+        char name[129];
+        int result = asphodel_get_ctrl_var_name_blocking(this->device, index, name, &length);
         if (result != 0)
         {
             Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
         }
         Napi::String s = Napi::String::New(info.Env(), name, length);
-        delete[] name;
         return s;
     }
 
@@ -417,20 +558,17 @@ public:
 
     Napi::Value getBootloaderBlockSizes(const Napi::CallbackInfo &info)
     {
-        uint8_t length = 0;
-        int result = asphodel_get_bootloader_block_sizes_blocking(this->device, nullptr, &length);
-        if (result != 0)
+        if (info.Length() != 1)
         {
-            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
         }
+        uint8_t length = info[0].As<Napi::Number>().Uint32Value();
         uint16_t *block_sizes = new uint16_t[length];
-
-        result = asphodel_get_bootloader_block_sizes_blocking(this->device, block_sizes, &length);
+        int result = asphodel_get_bootloader_block_sizes_blocking(this->device, block_sizes, &length);
         if (result != 0)
         {
             Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
         }
-
         Napi::Uint16Array arr = Napi::Uint16Array::New(info.Env(), length);
         memcpy(arr.Data(), block_sizes, sizeof(uint16_t) * length);
         delete[] block_sizes;
