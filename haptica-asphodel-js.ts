@@ -96,10 +96,6 @@ type UnitFormatter = {
 
 export const UnitFormatter: UnitFormatter = asp.UnitFormatter;
 
-let f = new UnitFormatter(0, 0, 0, 0, true);
-
-
-
 type Device = {
     close: () => void,
     supportsRadioCommands: () => boolean,
