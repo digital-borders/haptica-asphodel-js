@@ -289,7 +289,7 @@ Napi::Value createStreamDecoder(const Napi::CallbackInfo &info)
     Napi::Function constr = StreamDecoder::getClass(info.Env());
     Napi::Object ob = Napi::Object::New(info.Env());
     ob.Set("decoder", Napi::External<AsphodelStreamDecoder_t>::New(info.Env(), decoder));
-    return constr.Call({ob});
+    return constr.New({ob});
 }
 
 Napi::Value createDeviceDecoder(const Napi::CallbackInfo &info)
@@ -322,7 +322,7 @@ Napi::Value createDeviceDecoder(const Napi::CallbackInfo &info)
     Napi::Object ob = Napi::Object::New(info.Env());
     ob.Set("decoder", Napi::External<AsphodelDeviceDecoder_t>::New(info.Env(), decoder));
     delete[] sc;
-    return constr.Call({ob});
+    return constr.New({ob});
 }
 
 Napi::Value createChannelDecoder(const Napi::CallbackInfo &info)
@@ -344,7 +344,7 @@ Napi::Value createChannelDecoder(const Napi::CallbackInfo &info)
     Napi::Function constr = ChannelDecoder::getClass(info.Env());
     Napi::Object ob = Napi::Object::New(info.Env());
     ob.Set("decoder", Napi::External<AsphodelChannelDecoder_t>::New(info.Env(), dec));
-    return constr.Call({ob});
+    return constr.New({ob});
 }
 
 

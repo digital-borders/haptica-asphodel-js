@@ -196,7 +196,7 @@ public:
             Napi::Function constr = ChannelDecoder::getClass(info.Env());
             Napi::Object ob = Napi::Object::New(info.Env());
             ob.Set("decoder", Napi::External<AsphodelChannelDecoder_t>::New(info.Env(), this->decoder->decoders[i]));
-            arr[i] = constr.Call({ob});
+            arr[i] = constr.New({ob});
         }
         return arr;
     }
@@ -321,7 +321,7 @@ public:
             Napi::Function constr = StreamDecoder::getClass(info.Env());
             Napi::Object ob = Napi::Object::New(info.Env());
             ob.Set("decoder", Napi::External<AsphodelStreamDecoder_t>::New(info.Env(), this->decoder->decoders[i]));
-            arr[i] = constr.Call({ob});
+            arr[i] = constr.New({ob});
         }
         return arr;
     }

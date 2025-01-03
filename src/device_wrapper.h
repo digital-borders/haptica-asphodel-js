@@ -707,7 +707,7 @@ public:
         Napi::Object ob = Napi::Object::New(info.Env());
         ob.Set("info", Napi::External<AsphodelChannelInfo_t>::New(info.Env(), channel));
         ob.Set("tofree", false);
-        return constr.Call({ob});
+        return constr.New({ob});
     }
 
     Napi::Value getChannelName(const Napi::CallbackInfo &info)
@@ -745,7 +745,7 @@ public:
         Napi::Object ob = Napi::Object::New(info.Env());
         ob.Set("info", Napi::External<AsphodelChannelInfo_t>::New(info.Env(), channel));
         ob.Set("tofree", true);
-        return constr.Call({ob});
+        return constr.New({ob});
     }
 
     Napi::Value getChannelCount(const Napi::CallbackInfo &info)
@@ -855,7 +855,7 @@ public:
         Napi::Object ob = Napi::Object::New(info.Env());
         ob.Set("info", Napi::External<AsphodelStreamInfo_t>::New(info.Env(), stream));
         ob.Set("tofree", true);
-        return constr.Call({ob});
+        return constr.New({ob});
     }
 
     Napi::Value getStreamChannels(const Napi::CallbackInfo &info)
@@ -898,7 +898,7 @@ public:
         Napi::Object ob = Napi::Object::New(info.Env());
         ob.Set("info", Napi::External<AsphodelStreamInfo_t>::New(info.Env(), stream));
         ob.Set("tofree", false);
-        return constr.Call({ob});
+        return constr.New({ob});
     }
 
     Napi::Value getStreamCount(const Napi::CallbackInfo &info)
