@@ -6,7 +6,7 @@ const main = async () => {
   USBInit();
   console.log("Hello, World!");
   // search for devices
-  const devices = USBFindDevices();
+  const devices = USBFindDevices(5);
   console.log("dev", devices);
 
   for (const device of devices) {

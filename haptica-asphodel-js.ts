@@ -359,7 +359,7 @@ export const getChannelTypeCount: () => number = asp.getChannelTypeCount
 export const USBInit: () => void = asp.USBInit
 export const USBDeInit: () => void = asp.USBDeInit
 export const USBPollDevices: (millis: number) => void = asp.USBPollDevices
-export const USBFindDevices: () => Device[] = asp.USBFindDevices
+export const USBFindDevices: (length: number) => Device[] = asp.USBFindDevices
 export const USBGetBackendVersion: () => string = asp.USBGetBackendVersion
 
 enum TCPFilter {
