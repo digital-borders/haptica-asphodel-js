@@ -187,12 +187,135 @@ public:
                                              InstanceMethod("getChannelChunk", &DeviceWrapper::getChannelChunk),
                                              InstanceMethod("getChannelSpecific", &DeviceWrapper::getChannelSpecific),
                                              InstanceMethod("getChannelCalibration", &DeviceWrapper::getChannelCallib),
+
                                              InstanceMethod("bootloaderStartProgram", &DeviceWrapper::bootloaderStartProgram),
                                              InstanceMethod("getBootloaderPageInfo", &DeviceWrapper::getBootloaderPageInfo),
                                              InstanceMethod("getBootloaderBlockSizes", &DeviceWrapper::getBootloaderBlockSizes),
+                                             InstanceMethod("startBootloaderPage", &DeviceWrapper::startBootloaderPage),
+                                             InstanceMethod("writeBootloaderCodeBlock", &DeviceWrapper::writeBootloaderCodeBlock),
+                                             InstanceMethod("writeBootloaderPage", &DeviceWrapper::writeBootloaderPage),
+                                             InstanceMethod("finishBootloaderPage", &DeviceWrapper::finishBootloaderPage),
+                                             InstanceMethod("verifyBootloaderPage", &DeviceWrapper::finishBootloaderPage),
+                                             InstanceMethod("setStrainOutputs", &DeviceWrapper::setStrainOutputs),
+                                             InstanceMethod("enableAccelSelfTest", &DeviceWrapper::enableAccelSelfTest),
                                          });
 
         return fun;
+    }
+
+    Napi::Value enableAccelSelfTest(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 2)
+        {
+            Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
+        }
+        int channel_index = info[0].As<Napi::Number>().Int32Value();
+        int enable = info[1].As<Napi::Boolean>().Value();
+
+        int result = asphodel_enable_accel_self_test_blocking(this->device, channel_index, enable);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
+    }
+
+    Napi::Value setStrainOutputs(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 4)
+        {
+            Napi::Error::New(info.Env(), "Expects 4 arguments").ThrowAsJavaScriptException();
+        }
+
+        int channel_index = info[0].As<Napi::Number>().Int32Value();
+        int bridge_index = info[1].As<Napi::Number>().Int32Value();
+        int positive_side = info[2].As<Napi::Number>().Int32Value();
+        int negative_side = info[3].As<Napi::Number>().Int32Value();
+
+        int result = asphodel_set_strain_outputs_blocking(this->device, channel_index, bridge_index, positive_side, negative_side);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
+    }
+
+    Napi::Value verifyBootloaderPage(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        Napi::Uint8Array mac_tag = info[0].As<Napi::Uint8Array>();
+        int result = asphodel_verify_bootloader_page_blocking(this->device, mac_tag.Data(), mac_tag.ByteLength());
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
+    }
+
+    Napi::Value finishBootloaderPage(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        Napi::Uint8Array mac_tag = info[0].As<Napi::Uint8Array>();
+        int result = asphodel_finish_bootloader_page_blocking(this->device, mac_tag.Data(), mac_tag.ByteLength());
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
+    }
+
+    Napi::Value writeBootloaderPage(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 2)
+        {
+            Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
+        }
+        Napi::Uint8Array data = info[0].As<Napi::Uint8Array>();
+        Napi::Uint16Array blocksizes = info[1].As<Napi::Uint16Array>();
+
+        int result = asphodel_write_bootloader_page_blocking(this->device, data.Data(), data.ByteLength(), blocksizes.Data(), blocksizes.ElementLength());
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
+    }
+
+    Napi::Value writeBootloaderCodeBlock(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        Napi::Uint8Array data = info[0].As<Napi::Uint8Array>();
+        int result = asphodel_write_bootloader_code_block_blocking(this->device, data.Data(), data.ByteLength());
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
+    }
+
+    Napi::Value startBootloaderPage(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 2)
+        {
+            Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
+        }
+        uint32_t pagenumber = info[0].As<Napi::Number>().Uint32Value();
+        Napi::Uint8Array nonce = info[1].As<Napi::Uint8Array>();
+        int result = asphodel_start_bootloader_page_blocking(this->device, pagenumber, nonce.Data(), nonce.ByteLength());
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
     }
 
     Napi::Value getBootloaderBlockSizes(const Napi::CallbackInfo &info)

@@ -2,41 +2,41 @@ const asp = require("./build/Release/haptica-asphodel-js.node")
 
 
 type ChannelDecoder = {
-    decode: (counter:number, buffer:Uint8Array)=>void,
-    setConversionFactor:(scale:number, offset:number)=>void,
-    reset:()=>void
-    getChannelBitOffset:()=>number,
-    getSamples:()=>number,
-    getSubChannels:()=>number,
-    getSubChannelNames: ()=>string[],
-    setDecodeCallback:(callback: (counter:number, data:Float64Array, samples: number, subchannels:number)=>void)=>void,
+    decode: (counter: number, buffer: Uint8Array) => void,
+    setConversionFactor: (scale: number, offset: number) => void,
+    reset: () => void
+    getChannelBitOffset: () => number,
+    getSamples: () => number,
+    getSubChannels: () => number,
+    getSubChannelNames: () => string[],
+    setDecodeCallback: (callback: (counter: number, data: Float64Array, samples: number, subchannels: number) => void) => void,
 }
 
 
 type StreamDecoder = {
-    decode:(counter:number, buffer:Uint8Array)=>void,
-    reset:()=>void,
-    getLastCount:()=>number,
-    getCounterByteOffset:()=>number,
-    getChannels: ()=>number,
-    setLostPacketCallback: (current:number, last: number)=>void,
-    getDecoders: ()=>ChannelDecoder[],
-    getUsedBits: ()=>number
+    decode: (counter: number, buffer: Uint8Array) => void,
+    reset: () => void,
+    getLastCount: () => number,
+    getCounterByteOffset: () => number,
+    getChannels: () => number,
+    setLostPacketCallback: (current: number, last: number) => void,
+    getDecoders: () => ChannelDecoder[],
+    getUsedBits: () => number
 }
 
 type DeviceDecoder = {
-    decode: (counter:number, buffer:Uint8Array)=>void,
-    reset:()=>void,
-    getIDByteOffset:()=>number,
-    getStreams:()=>number,
-    setUnknownIDCallback: (callback: (id:number)=>void)=>void,
-    getDecoders: ()=>StreamDecoder[],
-    getUsedBits: ()=>number,
-    getStreamIDs:()=>Uint8Array,
+    decode: (counter: number, buffer: Uint8Array) => void,
+    reset: () => void,
+    getIDByteOffset: () => number,
+    getStreams: () => number,
+    setUnknownIDCallback: (callback: (id: number) => void) => void,
+    getDecoders: () => StreamDecoder[],
+    getUsedBits: () => number,
+    getStreamIDs: () => Uint8Array,
 }
 
 type StreamInfo = {
-    getInfo:()=>{
+    getInfo: () => {
         channel_count: number,
         channel_index_list: Uint8Array,
         counter_bits: number,
@@ -47,8 +47,8 @@ type StreamInfo = {
     }
 }
 
-type ChannelInfo ={
-    getInfo:()=>{
+type ChannelInfo = {
+    getInfo: () => {
         bits_per_sample: number,
         channel_type: number,
         chunks: Uint8Array[],
@@ -62,13 +62,28 @@ type ChannelInfo ={
         unit_type: number,
         name: string
     },
+
+    checkAccelSelfTest: () => {
+        disabled: number,
+        enabled: number,
+        passed: number
+    },
+    getAccelSelfTestLimits: () => Float32Array,
+    checkStrainResistances: (bridge_index: number, baseline: number, positive_high: number, egative_high: number) => {
+        positive_resistance: number,
+        negative_resistance: number,
+        passed: number
+    },
+    getStrainBridgeValues: (bridge_index: number) => Float32Array,
+    getStrainBridgeSubchannel: (bridge_index: number) => number,
+    getStrainBridgeCount: () => number,
 }
 
 type StreamAndChannels = {
-    new (stream_id: number, stream_info: StreamInfo, channel_infos: ChannelInfo[]): any
+    new(stream_id: number, stream_info: StreamInfo, channel_infos: ChannelInfo[]): any
 }
 
-export const StreamAndChannels:StreamAndChannels = asp.StreamAndChannels;
+export const StreamAndChannels: StreamAndChannels = asp.StreamAndChannels;
 
 
 
@@ -91,8 +106,8 @@ type Device = {
     eraseNVM: () => void,
     getNVMSize: () => number,
     getChipID: () => string,
-    
-    
+
+
     writeNVMRaw: (start_address: number, data: Uint8Array) => void,
     writeNVMSection: (start_address: number, data: Uint8Array) => void,
     readNVMRaw: (start_address: number, length: number) => Uint8Array,
@@ -120,7 +135,7 @@ type Device = {
     getProtocalType: () => number,
     getLocationString: () => string,
     getSerialNumber: () => string,
-    
+
     doTranfer: (command: number, params: Uint8Array, call_back: (
         status: number, params: Uint8Array
     ) => void) => void,
@@ -248,6 +263,24 @@ type Device = {
             scale: number
         }
     },
+
+
+
+    bootloaderStartProgram: () => void,
+    getBootloaderPageInfo: () => {
+        page_info: number,
+        length: number
+    },
+    getBootloaderBlockSizes: () => Uint16Array,
+    startBootloaderPage: (page_number: number, nonce: Uint8Array) => void,
+    writeBootloaderCodeBlock: (data: Uint8Array) => number,
+    writeBootloaderPage: (data: Uint8Array, block_sizes: Uint16Array) => void,
+    finishBootloaderPage: (mac_tag: Uint8Array) => void,
+    verifyBootloaderPage: (mac_tag: Uint8Array) => void,
+
+    setStrainOutputs: (channel_index: number, bridge_index: number, positive_side: number, negative_side: number) => void,
+    enableAccelSelfTest: (channel_index: number, enable: boolean) => void
+
 }
 
 export const getErrorName: (err: number) => string = asp.getErrorName
@@ -283,7 +316,9 @@ export const TCPPollDevices: (millis: number) => void = asp.TCPPollDevices
 export const TCPCreateDevice: (host: string, port: number, timeout: number, serial: string) => Device = asp.TCPCreateDevice
 
 
-export const createChannelDecoder: (channel_info: ChannelInfo, channel_bit_offset:number)=>ChannelDecoder = asp.createChannelDecoder
-export const createDeviceDecoder: (stream_and_channels: StreamAndChannels[], filler_bits:number, id_bits:number)=>DeviceDecoder = asp.createDeviceDecoder
-export const createStreamDecoder: (stream_and_channels:StreamAndChannels, stream_bit_offset: number)=>StreamDecoder = asp.createStreamDecoder
-export const getStreamingCounts: (stream_and_channels: StreamAndChannels[], response_time:number, buffer_time:number)=>DeviceDecoder = asp.createDeviceDecoder
+export const createChannelDecoder: (channel_info: ChannelInfo, channel_bit_offset: number) => ChannelDecoder = asp.createChannelDecoder
+export const createDeviceDecoder: (stream_and_channels: StreamAndChannels[], filler_bits: number, id_bits: number) => DeviceDecoder = asp.createDeviceDecoder
+export const createStreamDecoder: (stream_and_channels: StreamAndChannels, stream_bit_offset: number) => StreamDecoder = asp.createStreamDecoder
+export const getStreamingCounts: (stream_and_channels: StreamAndChannels[], response_time: number, buffer_time: number) => DeviceDecoder = asp.createDeviceDecoder
+
+

@@ -398,8 +398,114 @@ public:
     {
         return DefineClass(env, "ChannelInfo", {
                                                    InstanceMethod("getInfo", &ChannelInfo::getInfo),
-                                                   //InstanceMethod("createDecoder", &ChannelInfo::createDecoder),
+                                                   InstanceMethod("checkAccelSelfTest", &ChannelInfo::checkAccelSelfTest),
+                                                   InstanceMethod("getAccelSelfTestLimits", &ChannelInfo::getAccelSelfTestLimits),
+                                                   InstanceMethod("checkStrainResistances", &ChannelInfo::checkStrainResistances),
+                                                   InstanceMethod("getStrainBridgeValues", &ChannelInfo::getStrainBridgeValues),
+                                                   InstanceMethod("getStrainBridgeSubchannel", &ChannelInfo::getStrainBridgeSubchannel),
+                                                   InstanceMethod("getStrainBridgeCount", &ChannelInfo::getStrainBridgeCount),
+                                                
                                                });
+    }
+
+        Napi::Value checkAccelSelfTest(const Napi::CallbackInfo &info)
+    {
+
+        double disabled = 0;
+        double enabled = 0;
+        int passed = 0;
+
+        int result = asphodel_check_accel_self_test(this->channel_info, &disabled, &enabled, &passed);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::Object ob = Napi::Object::New(info.Env());
+        ob.Set("disabled", disabled);
+        ob.Set("enabled", enabled);
+        ob.Set("passed", passed);
+        return ob;
+    }
+
+    Napi::Value getAccelSelfTestLimits(const Napi::CallbackInfo &info)
+    {
+        Napi::Float32Array arr = Napi::Float32Array::New(info.Env(), 6);
+        int result = asphodel_get_accel_self_test_limits(this->channel_info, arr.Data());
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return arr;
+    }
+
+    Napi::Value checkStrainResistances(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 4)
+        {
+            Napi::Error::New(info.Env(), "Expects 4 arguments").ThrowAsJavaScriptException();
+        }
+        int bridge_index = info[0].As<Napi::Number>().Int32Value();
+        double baseline = info[1].As<Napi::Number>().DoubleValue();
+        double positive_high = info[2].As<Napi::Number>().DoubleValue();
+        double negative_high = info[3].As<Napi::Number>().DoubleValue();
+
+        double positive_resistance = 0;
+        double negative_resistance = 0;
+        int passed = 0;
+
+        int result = asphodel_check_strain_resistances(this->channel_info, bridge_index, baseline, positive_high, negative_high, &positive_resistance, &negative_resistance, &passed);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::Object ob = Napi::Object::New(info.Env());
+        ob.Set("positive_resistance", positive_resistance);
+        ob.Set("negative_resistance", negative_resistance);
+        ob.Set("passed", passed);
+        return ob;
+    }
+
+    Napi::Value getStrainBridgeValues(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        int bridge_index = info[0].As<Napi::Number>().Int32Value();
+        Napi::Float32Array arr = Napi::Float32Array::New(info.Env(), 6);
+        int result = asphodel_get_strain_bridge_values(this->channel_info, bridge_index, arr.Data());
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return arr;
+    }
+
+    Napi::Value getStrainBridgeSubchannel(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        int bridge_index = info[0].As<Napi::Number>().Int32Value();
+        size_t index = 0;
+        int result = asphodel_get_strain_bridge_subchannel(this->channel_info, bridge_index, &index);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Number::New(info.Env(), index);
+    }
+
+    Napi::Value getStrainBridgeCount(const Napi::CallbackInfo &info)
+    {
+        int count = 0;
+        int result = asphodel_get_strain_bridge_count(this->channel_info, &count);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Number::New(info.Env(), count);
     }
 
     Napi::Value getInfo(const Napi::CallbackInfo &info)
@@ -432,8 +538,6 @@ public:
         ob.Set("name", Napi::String::New(info.Env(), (char *)channel->name, channel->name_length));
         return ob;
     }
-
-
 
     ~ChannelInfo()
     {
@@ -548,7 +652,8 @@ public:
         Napi::Object *ob = env.GetInstanceData<Napi::Object>();
         Napi::FunctionReference *ctor = new Napi::FunctionReference();
         *ctor = Napi::Persistent(f);
-        ob->Set("streamAndChannelConstructor", Napi::External<Napi::FunctionReference>::New(env, ctor, [](Napi::Env, Napi::FunctionReference *ref)                                                                                 { delete ref; }));
+        ob->Set("streamAndChannelConstructor", Napi::External<Napi::FunctionReference>::New(env, ctor, [](Napi::Env, Napi::FunctionReference *ref)
+                                                                                            { delete ref; }));
         exports.Set("StreamAndChannels", f);
         return exports;
     }
