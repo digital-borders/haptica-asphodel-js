@@ -187,10 +187,59 @@ public:
                                              InstanceMethod("getChannelChunk", &DeviceWrapper::getChannelChunk),
                                              InstanceMethod("getChannelSpecific", &DeviceWrapper::getChannelSpecific),
                                              InstanceMethod("getChannelCalibration", &DeviceWrapper::getChannelCallib),
-
+                                             InstanceMethod("bootloaderStartProgram", &DeviceWrapper::bootloaderStartProgram),
+                                             InstanceMethod("getBootloaderPageInfo", &DeviceWrapper::getBootloaderPageInfo),
+                                             InstanceMethod("getBootloaderBlockSizes", &DeviceWrapper::getBootloaderBlockSizes),
                                          });
 
         return fun;
+    }
+
+    Napi::Value getBootloaderBlockSizes(const Napi::CallbackInfo &info)
+    {
+        uint8_t length = 0;
+        int result = asphodel_get_bootloader_block_sizes_blocking(this->device, nullptr, &length);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        uint16_t *block_sizes = new uint16_t[length];
+
+        result = asphodel_get_bootloader_block_sizes_blocking(this->device, block_sizes, &length);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+
+        Napi::Uint16Array arr = Napi::Uint16Array::New(info.Env(), length);
+        memcpy(arr.Data(), block_sizes, sizeof(uint16_t) * length);
+        delete[] block_sizes;
+        return arr;
+    }
+
+    Napi::Value getBootloaderPageInfo(const Napi::CallbackInfo &info)
+    {
+        uint32_t pageinfo;
+        uint8_t length;
+        int result = asphodel_get_bootloader_page_info_blocking(this->device, &pageinfo, &length);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::Object ob = Napi::Object::New(info.Env());
+        ob.Set("page_info", pageinfo);
+        ob.Set("length", length);
+        return ob;
+    }
+
+    Napi::Value bootloaderStartProgram(const Napi::CallbackInfo &info)
+    {
+        int result = asphodel_bootloader_start_program_blocking(this->device);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
     }
 
     Napi::Value getChannelCallib(const Napi::CallbackInfo &info)
