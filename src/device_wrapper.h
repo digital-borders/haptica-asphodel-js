@@ -198,9 +198,106 @@ public:
                                              InstanceMethod("verifyBootloaderPage", &DeviceWrapper::finishBootloaderPage),
                                              InstanceMethod("setStrainOutputs", &DeviceWrapper::setStrainOutputs),
                                              InstanceMethod("enableAccelSelfTest", &DeviceWrapper::enableAccelSelfTest),
+
+                                             InstanceMethod("getCtrlVarCount", &DeviceWrapper::getCtrlVarCount),
+                                             InstanceMethod("getCtrlVarName", &DeviceWrapper::getCtrlVarName),
+                                             InstanceMethod("getCtrlVarInfo", &DeviceWrapper::getCtrlVarInfo),
+                                             InstanceMethod("getCtrlVar", &DeviceWrapper::getCtrlVar),
+                                             InstanceMethod("setCtrlVar", &DeviceWrapper::setCtrlVar),
+
                                          });
 
         return fun;
+    }
+
+    Napi::Value setCtrlVar(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 2)
+        {
+            Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        int32_t value = info[0].As<Napi::Number>().Int32Value();
+        int result = asphodel_set_ctrl_var_blocking(this->device, index, value);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
+    }
+
+    Napi::Value getCtrlVar(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        int32_t value;
+        int result = asphodel_get_ctrl_var_blocking(this->device, index, &value);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Number::New(info.Env(), value);
+    }
+
+    Napi::Value getCtrlVarInfo(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        AsphodelCtrlVarInfo_t in;
+        int result = asphodel_get_ctrl_var_info_blocking(this->device, index, &in);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::Object ob = Napi::Object::New(info.Env());
+        ob.Set("maximum", in.maximum);
+        ob.Set("minimum", in.minimum);
+        ob.Set("offset", in.offset);
+        ob.Set("scale", in.scale);
+        ob.Set("unit_type", in.unit_type);
+        ob.Set("name", Napi::String::New(info.Env(), (char *)in.name, in.name_length));
+        return ob;
+    }
+
+    Napi::Value getCtrlVarName(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        uint8_t length = 0;
+        int result = asphodel_get_ctrl_var_name_blocking(this->device, index, nullptr, &length);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        char *name = new char[length];
+        result = asphodel_get_ctrl_var_name_blocking(this->device, index, name, &length);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::String s = Napi::String::New(info.Env(), name, length);
+        delete[] name;
+        return s;
+    }
+
+    Napi::Value getCtrlVarCount(const Napi::CallbackInfo &info)
+    {
+        int count = 0;
+        int result = asphodel_get_ctrl_var_count_blocking(this->device, &count);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Number::New(info.Env(), count);
     }
 
     Napi::Value enableAccelSelfTest(const Napi::CallbackInfo &info)

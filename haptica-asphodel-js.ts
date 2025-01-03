@@ -279,7 +279,21 @@ type Device = {
     verifyBootloaderPage: (mac_tag: Uint8Array) => void,
 
     setStrainOutputs: (channel_index: number, bridge_index: number, positive_side: number, negative_side: number) => void,
-    enableAccelSelfTest: (channel_index: number, enable: boolean) => void
+    enableAccelSelfTest: (channel_index: number, enable: boolean) => void,
+
+    getCtrlVarCount: ()=>number,
+    getCtrlVarName: (index: number)=>string,
+    getCtrlVarInfo: (index:number)=>{
+        maximum:number,
+        minimum:number,
+        offset:number,
+        scale: number,
+        unit_type:number,
+        name: string
+    },
+    getCtrlVar:(index:number)=>number,
+    setCtrlVar:(index:number, value:number)=>void,
+
 
 }
 
