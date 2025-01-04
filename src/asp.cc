@@ -366,7 +366,7 @@ Napi::Value getStreamingCounts(const Napi::CallbackInfo &info)
     }
 
     double rt = info[1].As<Napi::Number>().DoubleValue();
-    double bt = info[2].As<Napi::Number>().Uint32Value();
+    double bt = info[2].As<Napi::Number>().DoubleValue();
     unsigned int timeout = info[3].As<Napi::Number>().Uint32Value();
 
     int packet_count;
