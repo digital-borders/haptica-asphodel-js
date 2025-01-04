@@ -19,7 +19,7 @@ export type StreamDecoder = {
     getLastCount: () => number,
     getCounterByteOffset: () => number,
     getChannels: () => number,
-    setLostPacketCallback: (current: number, last: number) => void,
+    setLostPacketCallback: (callback: (current: number, last: number)=>void) => void,
     getDecoders: () => ChannelDecoder[],
     getUsedBits: () => number
 }

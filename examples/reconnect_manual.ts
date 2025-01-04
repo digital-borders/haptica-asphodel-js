@@ -1,6 +1,7 @@
 import * as readline from "readline";
 import { ChannelInfo, createDeviceDecoder, Device, DeviceDecoder, getStreamingCounts, StreamAndChannels, StreamInfo, USBDeInit, USBFindDevices, USBInit } from "../haptica-asphodel-js";
 
+
 type DeviceInfo = {
     decoder: DeviceDecoder,
     stream_count: number,
@@ -16,7 +17,7 @@ function createDeviceInfo(device: Device): DeviceInfo {
         let channels: ChannelInfo[] = []
         let stream_info = stream.getInfo();
 
-        if(stream_info.channel_count == 0) {
+        if (stream_info.channel_count == 0) {
             throw new Error(`Error: stream ${i} has 0 channels`);
         }
 
@@ -28,28 +29,39 @@ function createDeviceInfo(device: Device): DeviceInfo {
         stream_infos.push(new StreamAndChannels(i, stream, channels))
     }
 
+    let decoder = createDeviceDecoder(stream_infos, stream_count.filler_bits, stream_count.id_bits);
+    let decs = decoder.getDecoders();
+
+    decs.forEach((dec, i) => {
+        dec.setLostPacketCallback((current, last) => {
+            console.log(`Lost ${current - last - 1} from ${device.getSerialNumber()} stream ${i} `)
+        })
+    })
+
+
     return {
         stream_count: stream_count.count,
         serial_number: device.getSerialNumber(),
-        decoder: createDeviceDecoder(stream_infos, stream_count.filler_bits, stream_count.id_bits),
+        decoder: decoder,
         info_array: stream_infos
     }
+
 }
 
 function main() {
-    
+
     while (true) {
         let devices = USBFindDevices(10);
-        
+
         console.log(`Found ${devices.length} devices`);
-        
+
         let device_info_array: DeviceInfo[] = [];
         for (let device of devices) {
             device.open();
             let device_info = createDeviceInfo(device);
             device_info_array.push(device_info);
         }
-        
+
         for (let i = 0; i < device_info_array.length; i++) {
             let response_time = 0.100; // 100 milliseconds
             let buffer_time = 0.500; // 500 milliseconds
@@ -57,7 +69,7 @@ function main() {
             let streaming_counts = getStreamingCounts(device_info_array[i].info_array, response_time, buffer_time, timeout)
 
             console.log(`Enabling ${device_info_array[i].stream_count} streams from ${device_info_array[i].serial_number}`)
-            
+
             console.log("Transfer count: ", streaming_counts.transfer_count);
 
             devices[i].startStreamingPackets(streaming_counts.packet_count,
@@ -72,7 +84,7 @@ function main() {
                     }
                 });
         }
-        
+
         let rl = readline.createInterface({
             input: process.stdin,
             output: process.stdout
@@ -87,14 +99,14 @@ function main() {
             for (let j = 0; j < device_info_array[i].stream_count; j++) {
                 devices[i].enableStream(j, false);
             }
-            
+
             devices[i].stopStreamingPackets();
             devices[i].poll(10);
             devices[i].close();
         }
 
     }
-    
+
 }
 
 USBInit()
