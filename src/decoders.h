@@ -609,6 +609,10 @@ class StreamAndChannels : public Napi::ObjectWrap<StreamAndChannels>
 public:
     AsphodelStreamAndChannels_t strAndCh = {};
 
+    Napi::Reference<Napi::Object> stream_info;
+    Napi::Reference<Napi::Array> channel_infos;
+    
+
     StreamAndChannels(const Napi::CallbackInfo &info) : Napi::ObjectWrap<StreamAndChannels>(info)
     {
         if (info.Length() != 3)
@@ -619,9 +623,13 @@ public:
         uint8_t id = info[0].As<Napi::Number>().Uint32Value();
         Napi::Object stream_info = info[1].As<Napi::Object>();
 
+        this->stream_info = Napi::Persistent(stream_info);
+
         auto *stream_info_instance = StreamInfo::Unwrap(stream_info)->stream_info;
 
         Napi::Array channel_infos = info[2].As<Napi::Array>();
+
+        this->channel_infos = Napi::Persistent(channel_infos);
 
         AsphodelChannelInfo_t **channel_info_instances = new AsphodelChannelInfo_t *[channel_infos.Length()];
 
@@ -647,7 +655,12 @@ public:
 
     static Napi::Object Init(Napi::Env env, Napi::Object exports)
     {
-        Napi::Function f = DefineClass(env, "StreamAndChannels", {InstanceMethod("laugh", &StreamAndChannels::laugh)});
+        Napi::Function f = DefineClass(env, "StreamAndChannels", {
+            InstanceMethod("laugh", &StreamAndChannels::laugh),
+            InstanceMethod("getStreamInfo", &StreamAndChannels::getStreamInfo),
+            InstanceMethod("getChannelInfos", &StreamAndChannels::getChannelInfos),
+
+            });
 
         Napi::Object *ob = env.GetInstanceData<Napi::Object>();
         Napi::FunctionReference *ctor = new Napi::FunctionReference();
@@ -658,8 +671,18 @@ public:
         return exports;
     }
 
+    Napi::Value getStreamInfo(const Napi::CallbackInfo &info) {
+        return this->stream_info.Value();
+    }
+
+    Napi::Value getChannelInfos(const Napi::CallbackInfo &info) {
+        return this->channel_infos.Value();
+    }
+
     ~StreamAndChannels()
     {
+        this->channel_infos.Unref();
+        this->stream_info.Unref();
         delete[] this->strAndCh.channel_info;
     }
 };

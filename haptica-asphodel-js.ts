@@ -80,17 +80,22 @@ export type ChannelInfo = {
 }
 
 export type StreamAndChannels = {
-    new(stream_id: number, stream_info: StreamInfo, channel_infos: ChannelInfo[]): any
+    getStreamInfo:()=> StreamInfo,
+    getChannelInfos:()=> ChannelInfo[],
+    new(stream_id: number, stream_info: StreamInfo, channel_infos: ChannelInfo[]):StreamAndChannels
 }
 
 export const StreamAndChannels: StreamAndChannels = asp.StreamAndChannels;
 
 export type UnitFormatter = {
-    new(unit_type: number, minimum: number, maximum: number, resolution: number, use_metric: boolean): {
-        FormatBare: (buffer_size: number, value: number) => Uint8Array,
-        FormatAscii: (buffer_size: number, value: number) => Uint8Array,
-        FormatHtml: (buffer_size: number, value: number) => Uint8Array,
-    }
+    FormatBare: (buffer_size: number, value: number) => Uint8Array,
+    FormatAscii: (buffer_size: number, value: number) => Uint8Array,
+    FormatHtml: (buffer_size: number, value: number) => Uint8Array,
+    
+    getUnitAscii:()=>string,
+    getUnitHtml:()=>string,
+    getUnitUtf8:()=>string
+    new(unit_type: number, minimum: number, maximum: number, resolution: number, use_metric: boolean): UnitFormatter,
 }
 
 

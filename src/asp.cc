@@ -420,7 +420,9 @@ public:
                                                                     InstanceMethod("FormatBare", &UnitFormatter::formatBare),
                                                                     InstanceMethod("FormatAscii", &UnitFormatter::formatAscii),
                                                                     InstanceMethod("FormatHtml", &UnitFormatter::formatHtml),
-
+                                                                    InstanceMethod("getUnitAscii", &UnitFormatter::getUnitAscii),
+                                                                    InstanceMethod("getUnitHtml", &UnitFormatter::getUnitHtml),
+                                                                    InstanceMethod("getUnitUtf8", &UnitFormatter::getUnitUtf8),
                                                                 });
 
         Napi::Object *ob = env.GetInstanceData<Napi::Object>();
@@ -490,7 +492,38 @@ public:
         return buf;
     }
 
-    ~UnitFormatter(){
+    Napi::Value getUnitUtf8(const Napi::CallbackInfo &info)
+    {
+        if (this->formatter->unit_utf8 == nullptr || *this->formatter->unit_utf8 == '\0')
+        {
+            return Napi::String::New(info.Env(), "");
+        }
+
+        return Napi::String::New(info.Env(), this->formatter->unit_utf8);
+    }
+
+    Napi::Value getUnitHtml(const Napi::CallbackInfo &info)
+    {
+        if (this->formatter->unit_html == nullptr || *this->formatter->unit_html == '\0')
+        {
+            return Napi::String::New(info.Env(), "");
+        }
+
+        return Napi::String::New(info.Env(), this->formatter->unit_html);
+    }
+
+    Napi::Value getUnitAscii(const Napi::CallbackInfo &info)
+    {
+        if (this->formatter->unit_ascii == nullptr || *this->formatter->unit_ascii == '\0')
+        {
+            return Napi::String::New(info.Env(), "");
+        }
+
+        return Napi::String::New(info.Env(), this->formatter->unit_ascii);
+    }
+
+    ~UnitFormatter()
+    {
         this->formatter->free(this->formatter);
     }
 };

@@ -1,7 +1,7 @@
 import * as readline from "readline";
-import { ChannelInfo, createDeviceDecoder, Device, DeviceDecoder, getStreamingCounts, StreamAndChannels, StreamInfo, USBDeInit, USBFindDevices, USBInit } from "../haptica-asphodel-js";
+import { ChannelDecoder, ChannelInfo, createDeviceDecoder, Device, DeviceDecoder, getStreamingCounts, StreamAndChannels, StreamInfo, UnitFormatter, USBDeInit, USBFindDevices, USBInit } from "../haptica-asphodel-js";
 
-function click(message) {
+function click(message: string) {
     return new Promise((resolve) => {
         let rl = readline.createInterface({
             input: process.stdin,
@@ -15,11 +15,39 @@ function click(message) {
     })
 }
 
+type ChannelClosure = {
+    unit_formatter: UnitFormatter,
+    counter_time_scale:number,
+	sample_time_scale:number
+}
+
 type DeviceInfo = {
     decoder: DeviceDecoder,
     stream_count: number,
     info_array: StreamAndChannels[],
     serial_number: string
+}
+
+function createChannelClosure(
+    serial_number: string,
+    stream_info: StreamInfo,
+    channel_info: ChannelInfo,
+    channel_decoder: ChannelDecoder) {
+        let strinfo = stream_info.getInfo();
+        let chinfo = channel_info.getInfo();
+
+        let channel_closure: ChannelClosure = {
+            unit_formatter: new UnitFormatter(chinfo.unit_type, chinfo.minimum, chinfo.maximum, chinfo.resolution, true),
+            counter_time_scale: 0.0,
+            sample_time_scale: 0.0
+        }
+
+        if(strinfo.rate != 0.0 && channel_decoder.getSamples() != 0) {
+            channel_closure.counter_time_scale = 1/(strinfo.rate)
+            channel_closure.sample_time_scale = channel_closure.counter_time_scale/channel_decoder.getSamples()
+        }
+
+        return channel_closure;
 }
 
 function createDeviceInfo(device: Device): DeviceInfo {
@@ -43,14 +71,37 @@ function createDeviceInfo(device: Device): DeviceInfo {
     }
 
     let decoder = createDeviceDecoder(stream_infos, stream_count.filler_bits, stream_count.id_bits);
+
+    decoder.setUnknownIDCallback((id) => {
+        console.log(`Unknown stream id ${id} on ${device.getSerialNumber()}`)
+    })
+
     let decs = decoder.getDecoders();
 
     decs.forEach((dec, i) => {
+        let stream_info = stream_infos[i].getStreamInfo();
         dec.setLostPacketCallback((current, last) => {
             console.log(`Lost ${current - last - 1} from ${device.getSerialNumber()} stream ${i} `)
         })
-    })
 
+        dec.getDecoders().forEach((channel_decoder, j) => {
+            let channel_info = stream_infos[i].getChannelInfos()[j];
+            let channel_closure = createChannelClosure("", stream_info, channel_info, channel_decoder)
+            channel_decoder.setDecodeCallback((counter, data, samples, subchannels) => {
+                for (let sample = 0; sample < samples; sample++) {
+                    if(channel_closure.counter_time_scale == 0) {
+                        console.log("channel_closure.counter_time_scale == 0", counter);
+                    } else {
+                        let time = counter*channel_closure.counter_time_scale+sample*channel_closure.sample_time_scale;
+                        console.log("channel_closure.counter_time_scale != 0", time)
+                    }
+                    for(let sub = 0; sub < subchannels; i++) {
+                        console.log(channel_closure.unit_formatter.FormatBare(256, data[sample*subchannels+sub]))
+                    }
+                }
+            })
+        })
+    })
 
     return {
         stream_count: stream_count.count,
@@ -101,6 +152,10 @@ async function main() {
                         console.log(`Bad status ${status} in streaming packet callback`);
                     }
                 });
+
+                for (let j = 0; j < device_info_array[i].stream_count; j++) {
+                    devices[i].enableStream(j, true);
+                }
         }
 
         await click("Press any key to restart data collection...\n");
