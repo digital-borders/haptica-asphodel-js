@@ -350,9 +350,9 @@ Napi::Value createChannelDecoder(const Napi::CallbackInfo &info)
 
 Napi::Value getStreamingCounts(const Napi::CallbackInfo &info)
 {
-    if (info.Length() != 3)
+    if (info.Length() != 4)
     {
-        Napi::Error::New(info.Env(), "Expects 3 arguments").ThrowAsJavaScriptException();
+        Napi::Error::New(info.Env(), "Expects 4 arguments").ThrowAsJavaScriptException();
     }
 
     Napi::Array scs = info[0].As<Napi::Array>();
@@ -367,10 +367,10 @@ Napi::Value getStreamingCounts(const Napi::CallbackInfo &info)
 
     double rt = info[1].As<Napi::Number>().DoubleValue();
     double bt = info[2].As<Napi::Number>().Uint32Value();
+    unsigned int timeout = info[3].As<Napi::Number>().Uint32Value();
 
     int packet_count;
     int transfer_count;
-    unsigned int timeout;
 
     int result = asphodel_get_streaming_counts(sc, scs.Length(), rt, bt, &packet_count, &transfer_count, &timeout);
     if (result != 0)

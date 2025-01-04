@@ -14,7 +14,7 @@ export type ChannelDecoder = {
 
 
 export type StreamDecoder = {
-    decode: (counter: number, buffer: Uint8Array) => void,
+    decode: (buffer: Uint8Array) => void,
     reset: () => void,
     getLastCount: () => number,
     getCounterByteOffset: () => number,
@@ -25,7 +25,7 @@ export type StreamDecoder = {
 }
 
 export type DeviceDecoder = {
-    decode: (counter: number, buffer: Uint8Array) => void,
+    decode: (buffer: Uint8Array) => void,
     reset: () => void,
     getIDByteOffset: () => number,
     getStreams: () => number,
@@ -423,6 +423,10 @@ export const TCPCreateDevice: (host: string, port: number, timeout: number, seri
 export const createChannelDecoder: (channel_info: ChannelInfo, channel_bit_offset: number) => ChannelDecoder = asp.createChannelDecoder
 export const createDeviceDecoder: (stream_and_channels: StreamAndChannels[], filler_bits: number, id_bits: number) => DeviceDecoder = asp.createDeviceDecoder
 export const createStreamDecoder: (stream_and_channels: StreamAndChannels, stream_bit_offset: number) => StreamDecoder = asp.createStreamDecoder
-export const getStreamingCounts: (stream_and_channels: StreamAndChannels[], response_time: number, buffer_time: number) => DeviceDecoder = asp.createDeviceDecoder
+export const getStreamingCounts: (stream_and_channels: StreamAndChannels[], response_time: number, buffer_time: number, timeout:number) => {
+    packet_count: number,
+    transfer_count: number,
+    timeout:number
+} = asp.createDeviceDecoder
 
 
