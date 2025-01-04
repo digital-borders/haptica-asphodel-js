@@ -1,7 +1,7 @@
 const asp = require("./build/Release/haptica-asphodel-js.node")
 
 
-type ChannelDecoder = {
+export type ChannelDecoder = {
     decode: (counter: number, buffer: Uint8Array) => void,
     setConversionFactor: (scale: number, offset: number) => void,
     reset: () => void
@@ -13,7 +13,7 @@ type ChannelDecoder = {
 }
 
 
-type StreamDecoder = {
+export type StreamDecoder = {
     decode: (counter: number, buffer: Uint8Array) => void,
     reset: () => void,
     getLastCount: () => number,
@@ -24,7 +24,7 @@ type StreamDecoder = {
     getUsedBits: () => number
 }
 
-type DeviceDecoder = {
+export type DeviceDecoder = {
     decode: (counter: number, buffer: Uint8Array) => void,
     reset: () => void,
     getIDByteOffset: () => number,
@@ -35,7 +35,7 @@ type DeviceDecoder = {
     getStreamIDs: () => Uint8Array,
 }
 
-type StreamInfo = {
+export type StreamInfo = {
     getInfo: () => {
         channel_count: number,
         channel_index_list: Uint8Array,
@@ -47,7 +47,7 @@ type StreamInfo = {
     }
 }
 
-type ChannelInfo = {
+export type ChannelInfo = {
     getInfo: () => {
         bits_per_sample: number,
         channel_type: number,
@@ -79,13 +79,13 @@ type ChannelInfo = {
     getStrainBridgeCount: () => number,
 }
 
-type StreamAndChannels = {
+export type StreamAndChannels = {
     new(stream_id: number, stream_info: StreamInfo, channel_infos: ChannelInfo[]): any
 }
 
 export const StreamAndChannels: StreamAndChannels = asp.StreamAndChannels;
 
-type UnitFormatter = {
+export type UnitFormatter = {
     new(unit_type: number, minimum: number, maximum: number, resolution: number, use_metric: boolean): {
         FormatBare: (buffer_size: number, value: number) => Uint8Array,
         FormatAscii: (buffer_size: number, value: number) => Uint8Array,
@@ -96,7 +96,7 @@ type UnitFormatter = {
 
 export const UnitFormatter: UnitFormatter = asp.UnitFormatter;
 
-type Device = {
+export type Device = {
     close: () => void,
     supportsRadioCommands: () => boolean,
     supportsRemoteCommands: () => boolean,
@@ -401,7 +401,7 @@ export const USBPollDevices: (millis: number) => void = asp.USBPollDevices
 export const USBFindDevices: (length: number) => Device[] = asp.USBFindDevices
 export const USBGetBackendVersion: () => string = asp.USBGetBackendVersion
 
-enum TCPFilter {
+export enum TCPFilter {
     ASPHODEL_TCP_FILTER_DEFAULT = 0x0, // default parameters used by asphodel_tcp_find_devices()
     ASPHODEL_TCP_FILTER_PREFER_IPV6 = 0x0, // when a device SN is discovered on multiple protocols return only IPv6
     ASPHODEL_TCP_FILTER_PREFER_IPV4 = 0x1, // when a device SN is discovered on multiple protocols return only IPv4
