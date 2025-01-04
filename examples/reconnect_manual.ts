@@ -16,9 +16,14 @@ function createDeviceInfo(device: Device): DeviceInfo {
         let channels: ChannelInfo[] = []
         let stream_info = stream.getInfo();
 
+        if(stream_info.channel_count == 0) {
+            throw new Error(`Error: stream ${i} has 0 channels`);
+        }
+
         for (let j = 0; j < stream_info.channel_count; j++) {
             let channel_index = stream_info.channel_index_list[j];
-            channels.push(device.getChannel(channel_index))
+            let channel = device.getChannel(channel_index);
+            channels.push(channel)
         }
         stream_infos.push(new StreamAndChannels(i, stream, channels))
     }

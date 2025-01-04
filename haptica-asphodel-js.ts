@@ -427,6 +427,6 @@ export const getStreamingCounts: (stream_and_channels: StreamAndChannels[], resp
     packet_count: number,
     transfer_count: number,
     timeout:number
-} = asp.createDeviceDecoder
+} = asp.getStreamingCounts
 
 

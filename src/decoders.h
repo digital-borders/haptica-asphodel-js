@@ -588,7 +588,6 @@ public:
         ob.Set("rate", stream->rate);
         ob.Set("rate_error", stream->rate_error);
         ob.Set("warm_up_delay", stream->warm_up_delay);
-        asphodel_free_stream(stream);
         return ob;
     }
 
@@ -631,6 +630,7 @@ public:
             Napi::Object ob = channel_infos.Get(i).As<Napi::Object>();
             channel_info_instances[i] = ChannelInfo::Unwrap(ob)->channel_info;
         }
+        
 
         this->strAndCh = (AsphodelStreamAndChannels_t){
             .stream_id = id,
