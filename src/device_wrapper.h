@@ -224,9 +224,390 @@ public:
                                              InstanceMethod("getSettingCategoryCount", &DeviceWrapper::getSettingCategoryCount),
                                              InstanceMethod("getSettingCategoryName", &DeviceWrapper::getSettingCategoryName),
                                              InstanceMethod("getSettingCategorySettings", &DeviceWrapper::getSettingCategorySettings),
+
+                                             InstanceMethod("getGPIOPortCount", &DeviceWrapper::getGPIOPortCount),
+                                             InstanceMethod("getGPIOPortName", &DeviceWrapper::getGPIOPortName),
+                                             InstanceMethod("getGPIOPortInfo", &DeviceWrapper::getGPIOPortInfo),
+                                             InstanceMethod("getGPIOPortValues", &DeviceWrapper::getGPIOPortValues),
+                                             InstanceMethod("setGPIOPortModes", &DeviceWrapper::setGPIOPortModes),
+                                             InstanceMethod("disableGPIOOverrides", &DeviceWrapper::disableGPIOOverides),
+                                             InstanceMethod("getBusCounts", &DeviceWrapper::getBusCounts),
+                                             InstanceMethod("setSpiCsMode", &DeviceWrapper::setSpiCsModes),
+                                             InstanceMethod("doSPITransfer", &DeviceWrapper::doSPITransfer),
+                                             InstanceMethod("doI2CWrite", &DeviceWrapper::doI2CWrite),
+                                             InstanceMethod("doI2CRead", &DeviceWrapper::doI2CRead),
+                                             InstanceMethod("doI2CWriteRead", &DeviceWrapper::doI2CWriteRead),
+                                             InstanceMethod("doRadioFixedTest", &DeviceWrapper::doRadioFixedTest),
+                                             InstanceMethod("doRadioSweepTest", &DeviceWrapper::doRadioSweepTest),
+                                             InstanceMethod("getInfoRegionCount", &DeviceWrapper::getInfoRegCount),
+                                             InstanceMethod("getInfoRegionName", &DeviceWrapper::getInfoRegName),
+                                             InstanceMethod("getInfoRegion", &DeviceWrapper::getInfoRegion),
+                                             InstanceMethod("getStackInfo", &DeviceWrapper::getStackInfo),
+                                             InstanceMethod("echoRaw", &DeviceWrapper::echoRaw),
+                                             InstanceMethod("echoTransaction", &DeviceWrapper::echoTransaction),
+                                             InstanceMethod("echoParams", &DeviceWrapper::echoParams),
+
                                          });
 
         return fun;
+    }
+
+    Napi::Value echoParams(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 2)
+        {
+            Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
+        }
+        Napi::Uint8Array tx_data = info[0].As<Napi::Uint8Array>();
+        size_t reply_length = info[1].As<Napi::Number>().Uint32Value();
+        uint8_t *reply = new uint8_t[reply_length];
+        int result = asphodel_echo_params_blocking(this->device, tx_data.Data(), tx_data.ByteLength(), reply, &reply_length);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::Uint8Array replybuf = Napi::Uint8Array::New(info.Env(), reply_length);
+        memcpy(replybuf.Data(), reply, reply_length);
+        delete[] reply;
+        return replybuf;
+    }
+
+    Napi::Value echoTransaction(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 2)
+        {
+            Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
+        }
+        Napi::Uint8Array tx_data = info[0].As<Napi::Uint8Array>();
+        size_t reply_length = info[1].As<Napi::Number>().Uint32Value();
+        uint8_t *reply = new uint8_t[reply_length];
+        int result = asphodel_echo_transaction_blocking(this->device, tx_data.Data(), tx_data.ByteLength(), reply, &reply_length);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::Uint8Array replybuf = Napi::Uint8Array::New(info.Env(), reply_length);
+        memcpy(replybuf.Data(), reply, reply_length);
+        delete[] reply;
+        return replybuf;
+    }
+
+    Napi::Value echoRaw(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 2)
+        {
+            Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
+        }
+        Napi::Uint8Array tx_data = info[0].As<Napi::Uint8Array>();
+        size_t reply_length = info[1].As<Napi::Number>().Uint32Value();
+        uint8_t *reply = new uint8_t[reply_length];
+        int result = asphodel_echo_raw_blocking(this->device, tx_data.Data(), tx_data.ByteLength(), reply, &reply_length);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::Uint8Array replybuf = Napi::Uint8Array::New(info.Env(), reply_length);
+        memcpy(replybuf.Data(), reply, reply_length);
+        delete[] reply;
+        return replybuf;
+    }
+
+    Napi::Value getStackInfo(const Napi::CallbackInfo &info)
+    {
+        uint32_t sinfo[2] = {};
+        int result = asphodel_get_stack_info_blocking(this->device, sinfo);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::Object ob = Napi::Object::New(info.Env());
+        ob.Set("free", sinfo[0]);
+        ob.Set("used", sinfo[1]);
+        return ob;
+    }
+
+    Napi::Value getInfoRegion(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 2)
+        {
+            Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        uint8_t length = info[1].As<Napi::Number>().Uint32Value();
+        Napi::Uint8Array arr = Napi::Uint8Array::New(info.Env(), length);
+        int result = asphodel_get_info_region_blocking(this->device, index, arr.Data(), &length);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::Object ob = Napi::Object::New(info.Env());
+        ob.Set("result", arr);
+        ob.Set("length", length);
+        return ob;
+    }
+
+    Napi::Value getInfoRegName(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        uint8_t length = 128;
+        char name[129];
+        int result = asphodel_get_info_region_name_blocking(this->device, index, name, &length);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::String s = Napi::String::New(info.Env(), name, length);
+        return s;
+    }
+
+    Napi::Value getInfoRegCount(const Napi::CallbackInfo &info)
+    {
+        int count = 0;
+        int result = asphodel_get_info_region_count_blocking(this->device, &count);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Number::New(info.Env(), count);
+    }
+
+    Napi::Value doRadioSweepTest(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 5)
+        {
+            Napi::Error::New(info.Env(), "Expects 5 arguments").ThrowAsJavaScriptException();
+        }
+        uint16_t start_channel = info[0].As<Napi::Number>().Uint32Value();
+        uint16_t stop_channel = info[1].As<Napi::Number>().Uint32Value();
+        uint16_t hop_interval = info[2].As<Napi::Number>().Uint32Value();
+        uint16_t hop_count = info[3].As<Napi::Number>().Uint32Value();
+        uint8_t mode = info[4].As<Napi::Number>().Uint32Value();
+        int result = asphodel_do_radio_sweep_test_blocking(this->device, start_channel, stop_channel, hop_interval, hop_count, mode);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
+    }
+
+    Napi::Value doRadioFixedTest(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 3)
+        {
+            Napi::Error::New(info.Env(), "Expects 3 arguments").ThrowAsJavaScriptException();
+        }
+        uint16_t channel = info[0].As<Napi::Number>().Uint32Value();
+        uint16_t duration = info[1].As<Napi::Number>().Uint32Value();
+        uint8_t mode = info[2].As<Napi::Number>().Uint32Value();
+        int result = asphodel_do_radio_fixed_test_blocking(this->device, channel, duration, mode);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
+    }
+
+    Napi::Value doI2CWriteRead(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 4)
+        {
+            Napi::Error::New(info.Env(), "Expects 4 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        uint8_t addr = info[1].As<Napi::Number>().Uint32Value();
+        Napi::Uint8Array tx_data = info[2].As<Napi::Uint8Array>();
+        uint8_t read_length = info[3].As<Napi::Number>().Uint32Value();
+        Napi::Uint8Array rx_data = Napi::Uint8Array::New(info.Env(), read_length);
+        int result = asphodel_do_i2c_write_read_blocking(this->device, index, addr, tx_data.Data(), tx_data.ByteLength(), rx_data.Data(), rx_data.ByteLength());
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return rx_data;
+    }
+
+    Napi::Value doI2CRead(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 3)
+        {
+            Napi::Error::New(info.Env(), "Expects 3 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        uint8_t addr = info[1].As<Napi::Number>().Uint32Value();
+        uint8_t read_length = info[2].As<Napi::Number>().Uint32Value();
+        Napi::Uint8Array rx_data = Napi::Uint8Array::New(info.Env(), read_length);
+        int result = asphodel_do_i2c_read_blocking(this->device, index, addr, rx_data.Data(), rx_data.ByteLength());
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return rx_data;
+    }
+
+    Napi::Value doI2CWrite(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 3)
+        {
+            Napi::Error::New(info.Env(), "Expects 3 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        uint8_t addr = info[1].As<Napi::Number>().Uint32Value();
+        Napi::Uint8Array tx_data = info[2].As<Napi::Uint8Array>();
+        int result = asphodel_do_i2c_write_blocking(this->device, index, addr, tx_data.Data(), tx_data.ByteLength());
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
+    }
+
+    Napi::Value doSPITransfer(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 2)
+        {
+            Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        Napi::Uint8Array tx_data = info[1].As<Napi::Uint8Array>();
+        Napi::Uint8Array rx_data = Napi::Uint8Array::New(info.Env(), tx_data.ByteLength());
+        int result = asphodel_do_spi_transfer_blocking(this->device, index, tx_data.Data(), rx_data.Data(), rx_data.ByteLength());
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return rx_data;
+    }
+
+    Napi::Value setSpiCsModes(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 2)
+        {
+            Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        uint8_t cs_mode = info[1].As<Napi::Number>().Uint32Value();
+        int result = asphodel_set_spi_cs_mode_blocking(this->device, index, cs_mode);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
+    }
+
+    Napi::Value getBusCounts(const Napi::CallbackInfo &info)
+    {
+        int spi_count = 0;
+        int i2c_count = 0;
+        int result = asphodel_get_bus_counts_blocking(this->device, &spi_count, &i2c_count);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::Object ob = Napi::Object::New(info.Env());
+        ob.Set("spi_count", spi_count);
+        ob.Set("i2c_count", i2c_count);
+        return ob;
+    }
+
+    Napi::Value disableGPIOOverides(const Napi::CallbackInfo &info)
+    {
+        int result = asphodel_disable_gpio_overrides_blocking(this->device);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
+    }
+
+    Napi::Value setGPIOPortModes(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 3)
+        {
+            Napi::Error::New(info.Env(), "Expects 3 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        uint8_t mode = info[1].As<Napi::Number>().Uint32Value();
+        uint32_t pin = info[2].As<Napi::Number>().Int32Value();
+        int result = asphodel_set_gpio_port_modes_blocking(this->device, index, mode, pin);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Value();
+    }
+
+    Napi::Value getGPIOPortValues(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        uint32_t count = 0;
+        int result = asphodel_get_gpio_port_values_blocking(this->device, index, &count);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Number::New(info.Env(), count);
+    }
+
+    Napi::Value getGPIOPortInfo(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        AsphodelGPIOPortInfo_t in = {};
+        int result = asphodel_get_gpio_port_info_blocking(this->device, index, &in);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::Object ob = Napi::Object::New(info.Env());
+
+        ob.Set("floating_pins", in.floating_pins);
+        ob.Set("input_pins", in.input_pins);
+        ob.Set("loaded_pins", in.loaded_pins);
+        ob.Set("output_pins", in.output_pins);
+        ob.Set("overridden_pins", in.overridden_pins);
+        ob.Set("name", Napi::String::New(info.Env(), (char *)in.name, in.name_length));
+
+        return ob;
+    }
+
+    Napi::Value getGPIOPortName(const Napi::CallbackInfo &info)
+    {
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        int index = info[0].As<Napi::Number>().Int32Value();
+        uint8_t length = 128;
+        char name[129];
+        int result = asphodel_get_gpio_port_name_blocking(this->device, index, name, &length);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        Napi::String s = Napi::String::New(info.Env(), name, length);
+        return s;
+    }
+
+    Napi::Value getGPIOPortCount(const Napi::CallbackInfo &info)
+    {
+        int count = 0;
+        int result = asphodel_get_gpio_port_count_blocking(this->device, &count);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::Number::New(info.Env(), count);
     }
 
     Napi::Value getSettingCategorySettings(const Napi::CallbackInfo &info)

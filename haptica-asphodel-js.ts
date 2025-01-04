@@ -86,10 +86,10 @@ type StreamAndChannels = {
 export const StreamAndChannels: StreamAndChannels = asp.StreamAndChannels;
 
 type UnitFormatter = {
-    new(unit_type:number, minimum:number, maximum:number, resolution:number, use_metric: boolean): {
-        FormatBare: (buffer_size:number, value:number)=>Uint8Array,
-        FormatAscii: (buffer_size:number, value:number)=>Uint8Array,
-        FormatHtml: (buffer_size:number, value:number)=>Uint8Array,
+    new(unit_type: number, minimum: number, maximum: number, resolution: number, use_metric: boolean): {
+        FormatBare: (buffer_size: number, value: number) => Uint8Array,
+        FormatAscii: (buffer_size: number, value: number) => Uint8Array,
+        FormatHtml: (buffer_size: number, value: number) => Uint8Array,
     }
 }
 
@@ -290,30 +290,30 @@ type Device = {
     setStrainOutputs: (channel_index: number, bridge_index: number, positive_side: number, negative_side: number) => void,
     enableAccelSelfTest: (channel_index: number, enable: boolean) => void,
 
-    getCtrlVarCount: ()=>number,
-    getCtrlVarName: (index: number)=>string,
-    getCtrlVarInfo: (index:number)=>{
-        maximum:number,
-        minimum:number,
-        offset:number,
+    getCtrlVarCount: () => number,
+    getCtrlVarName: (index: number) => string,
+    getCtrlVarInfo: (index: number) => {
+        maximum: number,
+        minimum: number,
+        offset: number,
         scale: number,
-        unit_type:number,
+        unit_type: number,
         name: string
     },
-    getCtrlVar:(index:number)=>number,
-    setCtrlVar:(index:number, value:number)=>void,
+    getCtrlVar: (index: number) => number,
+    setCtrlVar: (index: number, value: number) => void,
 
-    enableRfPower: (enable: boolean)=>void,
-    getRfPowerStatus:()=> number,
-    getRfPowerCtlVars: (length: number)=>{
+    enableRfPower: (enable: boolean) => void,
+    getRfPowerStatus: () => number,
+    getRfPowerCtlVars: (length: number) => {
         result: Uint8Array,
         length: number
     },
-    resetRfPowerTimeout:(timeout: number)=>void,
+    resetRfPowerTimeout: (timeout: number) => void,
 
-    getSupplyCount: ()=>number,
-    getSupplyName: (index:number)=>string,
-    getSupplyInfo: (index:number)=>{
+    getSupplyCount: () => number,
+    getSupplyName: (index: number) => string,
+    getSupplyInfo: (index: number) => {
         is_battery: number,
         nominal: number,
         offset: number,
@@ -321,30 +321,69 @@ type Device = {
         unit_type: number,
         name: string,
     },
-    checkSupply:(index:number, tries:number)=>{
+    checkSupply: (index: number, tries: number) => {
         measurement: number,
         result: number
     },
 
 
-    getSettingCount:()=>number,
-    getSettingName:(index: number)=>string,
-    getSettingInfo:(index: number)=>any
-    getSettingDefault:(index:number)=>{
+    getSettingCount: () => number,
+    getSettingName: (index: number) => string,
+    getSettingInfo: (index: number) => any
+    getSettingDefault: (index: number) => {
         result: Uint8Array,
         length: number
     },
-    getCustomEnumCounts:(length: number)=>{
+    getCustomEnumCounts: (length: number) => {
         result: Uint8Array,
         length: number
     },
-    getCustomEnumValueName: (index:number, value:number)=>string,
-    getSettingCategoryCount:()=>number,
-    getSettingCategoryName:(index:number)=>string,
-    getSettingCategorySettings:(index:number, length:number)=>{
+    getCustomEnumValueName: (index: number, value: number) => string,
+    getSettingCategoryCount: () => number,
+    getSettingCategoryName: (index: number) => string,
+    getSettingCategorySettings: (index: number, length: number) => {
         result: Uint8Array,
         length: number
     },
+
+
+    getGPIOPortCount: () => number,
+    getGPIOPortName: (index: number) => string,
+    getGPIOPortInfo: (index: number) => {
+        floating_pins: number,
+        input_pins: number,
+        loaded_pins: number,
+        output_pins: number,
+        overridden_pins: number,
+        name: string
+    },
+    getGPIOPortValues: (index: number) => number,
+    setGPIOPortModes: (index: number, mode: number, pins: number) => number,
+    disableGPIOOverrides: () => void,
+    getBusCounts: () => {
+        spi_count: number,
+        i2c_count: number
+    },
+    setSpiCsMode: (index: number, cs_mode: number) => void,
+    doSPITransfer: (index: number, tx_data: Uint8Array) => Uint8Array,
+    doI2CWrite: (index: number, address: number, tx_data: Uint8Array) => void,
+    doI2CRead: (index: number, address: number, read_length: number) => Uint8Array,
+    doI2CWriteRead: (index: number, address: number, tx_data: Uint8Array, read_length: number) => Uint8Array,
+    doRadioFixedTest: (channel: number, duration: number, mode: number) => void,
+    doRadioSweepTest: (start_channel: number, stop_channel: number, hop_interval: number, hop_count: number, mode: number) => void,
+    getInfoRegionCount: () => number,
+    getInfoRegionName: (index: number) => string,
+    getInfoRegion: (index: number, length: number) => {
+        result: Uint8Array,
+        length: number
+    },
+    getStackInfo: () => {
+        free: number,
+        used: number
+    },
+    echoRaw: (data: Uint8Array, reply_length: number) => Uint8Array,
+    echoTransaction: (data: Uint8Array, reply_length: number) => Uint8Array,
+    echoParams: (data: Uint8Array, reply_length: number) => Uint8Array,
 
 }
 
