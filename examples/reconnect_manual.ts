@@ -103,7 +103,7 @@ async function main() {
                 });
 
                 for (let j = 0; j < device_info_array[i].stream_count; j++) {
-                    devices[i].enableStream(j, false);
+                    devices[i].enableStream(j, true);
                 }
         }
 
