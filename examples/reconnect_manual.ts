@@ -1,5 +1,5 @@
 import * as readline from "readline";
-import { ChannelInfo, createDeviceDecoder, Device, DeviceDecoder, getStreamingCounts, StreamAndChannels, StreamInfo, USBDeInit, USBFindDevices, USBInit } from "../haptica-asphodel-js";
+import { ChannelInfo, createDeviceDecoder, Device, DeviceDecoder, getStreamingCounts, StreamAndChannels, StreamInfo, USBDeInit, USBFindDevices, USBInit, USBPollDevices } from "../haptica-asphodel-js";
 
 function click(message) {
     return new Promise((resolve) => {
@@ -107,7 +107,11 @@ async function main() {
                 }
         }
 
-        await click("Press any key to restart data collection...\n");
+       // await click("Press any key to restart data collection...\n");
+
+       while(true) {
+        USBPollDevices(100);
+       }
 
         for (let i = 0; i < devices.length; i++) {
             console.log(`Disabling ${device_info_array[i].stream_count} streams from ${device_info_array[i].serial_number}`)
