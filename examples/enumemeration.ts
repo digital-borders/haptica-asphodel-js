@@ -1,5 +1,6 @@
-import { version } from "os"
+
 import { CHANNEL_TYPE_COMPOSITE_STRAIN, CHANNEL_TYPE_FAST_STRAIN, CHANNEL_TYPE_LINEAR_ACCEL, CHANNEL_TYPE_PACKED_ACCEL, CHANNEL_TYPE_SLOW_ACCEL, CHANNEL_TYPE_SLOW_STRAIN, ChannelInfo, createDeviceDecoder, Device, getChannelTypeName, getLibraryBuildDate, getLibraryBuildInfo, getLibraryProtocalVersion, getLibraryProtocalVersionString, getUnitTypeName, StreamAndChannels, TCPDeinit, TCPFindDevices, TCPInit, USBDeInit, USBFindDevices, USBGetBackendVersion, USBInit } from "../haptica-asphodel-js"
+
 
 
 
@@ -164,7 +165,7 @@ function printSupplyInfo(dev: Device) {
         try {
             let val = dev.checkSupply(i, 20)
             console.log(val)
-        }catch(e){}
+        } catch (e) { }
     }
 }
 
@@ -354,9 +355,9 @@ function printDeviceInfo(device: Device) {
     printNvmInfo(device);
     printLedInfo(device)
     printStreamInfo(device)
-    try{
+    try {
         printChannelInfo(device)
-    }catch(e) {
+    } catch (e) {
         console.error(e)
     }
     printChannelSpecificinfo(device)
@@ -369,9 +370,9 @@ function printDeviceInfo(device: Device) {
     printLowLevelInfo(device)
     printRfPowerInfo(device)
     printRadioInfo(device)
-    try{
+    try {
         printRemoteInfo(device)
-    } catch(e){
+    } catch (e) {
         console.error(e)
     }
     printBootloaderInfo(device)
@@ -406,19 +407,19 @@ async function main() {
         device.open()
         printDeviceInfo(device)
 
-        if(device.supportsRadioCommands()) {
+        if (device.supportsRadioCommands()) {
             console.log("scanning fo remotes devices")
             device.startRadioScan()
-            setTimeout(()=>{
-                device.stopRadio()
-                let serials = device.getRadioScanResults(255)
 
-                    let sorted = serials.sort();
-                    console.log("Radio Scan results: ", sorted)
-                    sorted.forEach((serial)=>{
-                        printRemoteDeviceInfo(device, serial)
-                    })
-            }, 200)
+
+            device.stopRadio()
+            let serials = device.getRadioScanResults(255)
+
+            let sorted = serials.sort();
+            console.log("Radio Scan results: ", sorted)
+            sorted.forEach((serial) => {
+                printRemoteDeviceInfo(device, serial)
+            })
         }
     })
 
