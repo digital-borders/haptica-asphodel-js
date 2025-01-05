@@ -425,7 +425,7 @@ public:
                                                                     InstanceMethod("getUnitUtf8", &UnitFormatter::getUnitUtf8),
                                                                     InstanceMethod("getConversionScale", &UnitFormatter::getConversionScale),
                                                                     InstanceMethod("getConversionOffset", &UnitFormatter::getConversionOffset),
-                                                                    
+
                                                                 });
 
         Napi::Object *ob = env.GetInstanceData<Napi::Object>();
@@ -445,9 +445,10 @@ public:
             Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
         }
         double value = info[0].As<Napi::Number>().DoubleValue();
-        char buf [256] ={};
+        char buf[256] = {};
         int result = this->formatter->format_html(this->formatter, buf, 256, value);
-        if(result < 0) {
+        if (result < 0)
+        {
             Napi::Error::New(info.Env(), "Failed to format").ThrowAsJavaScriptException();
         }
         Napi::String s = Napi::String::New(info.Env(), buf, result);
@@ -461,9 +462,10 @@ public:
             Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
         }
         double value = info[0].As<Napi::Number>().DoubleValue();
-        char buf [256] ={};
+        char buf[256] = {};
         int result = this->formatter->format_html(this->formatter, buf, 256, value);
-        if(result < 0) {
+        if (result < 0)
+        {
             Napi::Error::New(info.Env(), "Failed to format").ThrowAsJavaScriptException();
         }
         Napi::String s = Napi::String::New(info.Env(), buf, result);
@@ -477,9 +479,10 @@ public:
             Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
         }
         double value = info[0].As<Napi::Number>().DoubleValue();
-        char buf [256] ={};
+        char buf[256] = {};
         int result = this->formatter->format_html(this->formatter, buf, 256, value);
-        if(result < 0) {
+        if (result < 0)
+        {
             Napi::Error::New(info.Env(), "Failed to format").ThrowAsJavaScriptException();
         }
         Napi::String s = Napi::String::New(info.Env(), buf, result);
@@ -516,11 +519,13 @@ public:
         return Napi::String::New(info.Env(), this->formatter->unit_ascii);
     }
 
-    Napi::Value getConversionOffset(const Napi::CallbackInfo &info){
+    Napi::Value getConversionOffset(const Napi::CallbackInfo &info)
+    {
         return Napi::Number::New(info.Env(), this->formatter->conversion_offset);
     }
 
-    Napi::Value getConversionScale(const Napi::CallbackInfo &info){
+    Napi::Value getConversionScale(const Napi::CallbackInfo &info)
+    {
         return Napi::Number::New(info.Env(), this->formatter->conversion_scale);
     }
 
@@ -529,6 +534,26 @@ public:
         this->formatter->free(this->formatter);
     }
 };
+
+Napi::Value getLibraryProtocalVersion(const Napi::CallbackInfo &info)
+{
+    return Napi::Number::New(info.Env(), asphodel_get_library_protocol_version());
+}
+
+Napi::Value getLibraryProtocalVersionString(const Napi::CallbackInfo &info)
+{
+    return Napi::String::New(info.Env(), asphodel_get_library_protocol_version_string());
+}
+
+Napi::Value getLibraryBuildDate(const Napi::CallbackInfo &info)
+{
+    return Napi::String::New(info.Env(), asphodel_get_library_build_date());
+}
+
+Napi::Value getLibraryBuildInfo(const Napi::CallbackInfo &info)
+{
+    return Napi::String::New(info.Env(), asphodel_get_library_build_info());
+}
 
 Napi::Object Init(Napi::Env env, Napi::Object exports)
 {
@@ -541,6 +566,11 @@ Napi::Object Init(Napi::Env env, Napi::Object exports)
     exports.Set(Napi::String::New(env, "getStreamingCounts"), Napi::Function::New(env, getStreamingCounts));
 
     UnitFormatter::Init(env, exports);
+
+    exports.Set("getLibraryProtocalVersion", Napi::Function::New(env, getLibraryProtocalVersion));
+    exports.Set("getLibraryProtocalVersionString", Napi::Function::New(env, getLibraryProtocalVersionString));
+    exports.Set("getLibraryBuildInfo", Napi::Function::New(env, getLibraryBuildInfo));
+    exports.Set("getLibraryBuildDate", Napi::Function::New(env, getLibraryBuildDate));
 
     exports.Set(Napi::String::New(env, "createChannelDecoder"), Napi::Function::New(env, createChannelDecoder));
     exports.Set(Napi::String::New(env, "createDeviceDecoder"), Napi::Function::New(env, createDeviceDecoder));

@@ -28,6 +28,7 @@ public:
                                                       InstanceMethod("getSamples", &ChannelDecoder::getSamples),
                                                       InstanceMethod("getSubChannels", &ChannelDecoder::getSubchannels),
                                                       InstanceMethod("getSubChannelNames", &ChannelDecoder::getSubchannelNames),
+                                                      InstanceMethod("getChannelName", &ChannelDecoder::getChannelName),
                                                       InstanceMethod("setDecodeCallback", &ChannelDecoder::setDecodeCallback),
                                                   });
     }
@@ -60,6 +61,11 @@ public:
     {
         this->decoder->reset(this->decoder);
         return Napi::Value();
+    }
+
+        Napi::Value getChannelName(const Napi::CallbackInfo &info)
+    {
+        return Napi::String::New(info.Env(), this->decoder->channel_name);
     }
 
     Napi::Value getChannelBitOffset(const Napi::CallbackInfo &info)
@@ -527,6 +533,7 @@ public:
         {
             coefs[i] = channel->coefficients[i];
         }
+        
         ob.Set("coefficients", coefs);
         ob.Set("data_bits", channel->data_bits);
         ob.Set("filler_bits", channel->filler_bits);
@@ -535,6 +542,7 @@ public:
         ob.Set("resolution", channel->resolution);
         ob.Set("samples", channel->samples);
         ob.Set("unit_type", channel->unit_type);
+        ob.Set("chunk_count", channel->chunk_count);
         ob.Set("name", Napi::String::New(info.Env(), (char *)channel->name, channel->name_length));
         return ob;
     }

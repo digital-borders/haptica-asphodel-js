@@ -246,6 +246,7 @@ public:
                                              InstanceMethod("echoRaw", &DeviceWrapper::echoRaw),
                                              InstanceMethod("echoTransaction", &DeviceWrapper::echoTransaction),
                                              InstanceMethod("echoParams", &DeviceWrapper::echoParams),
+                                             InstanceMethod("getUserTagLocations", &DeviceWrapper::getUserTagLocs),
 
                                          });
 
@@ -1177,20 +1178,35 @@ public:
         Napi::Uint16Array arr = Napi::Uint16Array::New(info.Env(), length);
         memcpy(arr.Data(), block_sizes, sizeof(uint16_t) * length);
         delete[] block_sizes;
-        return arr;
+
+        Napi::Object ob = Napi::Object::New(info.Env());
+        ob.Set("result", arr);
+        ob.Set("length", length);
+        return ob;
     }
 
     Napi::Value getBootloaderPageInfo(const Napi::CallbackInfo &info)
     {
-        uint32_t pageinfo;
-        uint8_t length;
-        int result = asphodel_get_bootloader_page_info_blocking(this->device, &pageinfo, &length);
+        if (info.Length() != 1)
+        {
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+        }
+        uint8_t length = info[0].As<Napi::Number>().Uint32Value();
+        uint32_t *page_info = new uint32_t[length];
+
+        int result = asphodel_get_bootloader_page_info_blocking(this->device, page_info, &length);
         if (result != 0)
         {
             Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
         }
         Napi::Object ob = Napi::Object::New(info.Env());
-        ob.Set("page_info", pageinfo);
+
+        Napi::Uint32Array arr = Napi::Uint32Array::New(info.Env(), length);
+
+        memcpy(arr.Data(), page_info, length);
+        delete[] page_info;
+
+        ob.Set("page_info", arr);
         ob.Set("length", length);
         return ob;
     }
@@ -2320,19 +2336,23 @@ public:
 
     Napi::Value readUserTagString(const Napi::CallbackInfo &info)
     {
-        if (info.Length() != 1)
+        if (info.Length() != 2)
         {
-            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
+            Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
         }
         size_t offset = info[0].As<Napi::Number>().Int64Value();
-        char buffer[129];
-        memset(buffer, 0, sizeof(buffer));
-        int result = asphodel_read_user_tag_string_blocking(this->device, offset, 128, buffer);
+        size_t length = info[1].As<Napi::Number>().Int64Value();
+
+        char *buffer = new char[length];
+        memset(buffer, 0, length);
+        int result = asphodel_read_user_tag_string_blocking(this->device, offset, length, buffer);
         if (result != 0)
         {
             Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
         }
-        return Napi::String::New(info.Env(), buffer);
+        auto s = Napi::String::New(info.Env(), buffer, length);
+        delete[] buffer;
+        return s;
     }
     //===========================
     Napi::Value readNvmSection(const Napi::CallbackInfo &info)
@@ -2534,12 +2554,13 @@ public:
             Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
         }
 
-        Napi::BigUint64Array arr = Napi::BigUint64Array::New(info.Env(), 6);
+        Napi::Uint32Array arr = Napi::Uint32Array::New(info.Env(), 6);
 
         for (int i = 0; i < 6; i++)
         {
-            arr[i] = locs[i];
+            arr[i] = (uint32_t)locs[i];
         }
+
         return arr;
     }
 
@@ -2614,10 +2635,7 @@ public:
 
     ~DeviceWrapper()
     {
-        // this->errorCbTrigger(this->device, 78, this);
-        // printf("done triggering error callback\n");
-        // this->device->close_device(this->device);
-        // this->device->free_device(this->device);
+        this->device->free_device(this->device);
     }
 
 private:
