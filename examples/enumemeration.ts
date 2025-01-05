@@ -161,8 +161,10 @@ function printSupplyInfo(dev: Device) {
         console.log(`is_battery: ${info.is_battery}, nominal: ${info.nominal}`)
         console.log(`scale: ${info.scale}, offset: ${info.offset}`)
 
-        let val = dev.checkSupply(i, 20)
-        console.log(val)
+        try {
+            let val = dev.checkSupply(i, 20)
+            console.log(val)
+        }catch(e){}
     }
 }
 
