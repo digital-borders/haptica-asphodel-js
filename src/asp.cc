@@ -440,46 +440,50 @@ public:
 
     Napi::Value formatBare(const Napi::CallbackInfo &info)
     {
-        if (info.Length() != 2)
+        if (info.Length() != 1)
         {
-            Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
         }
-        size_t buffer_size = info[0].As<Napi::Number>().Uint32Value();
         double value = info[1].As<Napi::Number>().DoubleValue();
-
-        Napi::Int8Array buf = Napi::Int8Array::New(info.Env(), buffer_size);
-        this->formatter->format_bare(this->formatter, (char *)buf.Data(), buf.ByteLength(), value);
-        return buf;
+        char buf [256] ={};
+        int result = this->formatter->format_html(this->formatter, buf, 256, value);
+        if(result < 0) {
+            Napi::Error::New(info.Env(), "Failed to format").ThrowAsJavaScriptException();
+        }
+        Napi::String s = Napi::String::New(info.Env(), buf, result);
+        return s;
     }
 
     Napi::Value formatAscii(const Napi::CallbackInfo &info)
     {
-        if (info.Length() != 2)
+        if (info.Length() != 1)
         {
-            Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
         }
-        size_t buffer_size = info[0].As<Napi::Number>().Uint32Value();
         double value = info[1].As<Napi::Number>().DoubleValue();
-
-        Napi::Int8Array buf = Napi::Int8Array::New(info.Env(), buffer_size);
-
-        this->formatter->format_ascii(this->formatter, (char *)buf.Data(), buf.ByteLength(), value);
-        return buf;
+        char buf [256] ={};
+        int result = this->formatter->format_html(this->formatter, buf, 256, value);
+        if(result < 0) {
+            Napi::Error::New(info.Env(), "Failed to format").ThrowAsJavaScriptException();
+        }
+        Napi::String s = Napi::String::New(info.Env(), buf, result);
+        return s;
     }
 
     Napi::Value formatHtml(const Napi::CallbackInfo &info)
     {
-        if (info.Length() != 2)
+        if (info.Length() != 1)
         {
-            Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
+            Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
         }
-        size_t buffer_size = info[0].As<Napi::Number>().Uint32Value();
         double value = info[1].As<Napi::Number>().DoubleValue();
-
-        Napi::Int8Array buf = Napi::Int8Array::New(info.Env(), buffer_size);
-
-        this->formatter->format_html(this->formatter, (char *)buf.Data(), buf.ByteLength(), value);
-        return buf;
+        char buf [256] ={};
+        int result = this->formatter->format_html(this->formatter, buf, 256, value);
+        if(result < 0) {
+            Napi::Error::New(info.Env(), "Failed to format").ThrowAsJavaScriptException();
+        }
+        Napi::String s = Napi::String::New(info.Env(), buf, result);
+        return s;
     }
 
     Napi::Value getUnitUtf8(const Napi::CallbackInfo &info)
