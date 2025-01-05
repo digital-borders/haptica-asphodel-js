@@ -448,9 +448,7 @@ public:
         double value = info[1].As<Napi::Number>().DoubleValue();
 
         Napi::Int8Array buf = Napi::Int8Array::New(info.Env(), buffer_size);
-
         this->formatter->format_bare(this->formatter, (char *)buf.Data(), buf.ByteLength(), value);
-=
         return buf;
     }
 
