@@ -124,9 +124,8 @@ function printSettingInfo(dev: Device) {
         console.log("name: ", name)
 
         let info = dev.getSettingInfo(i)
-        switch (info.getType()) {
-            default:
-        }
+
+        console.log("Setting info", info);
 
         let def = dev.getSettingDefault(i, 255)
         console.log("Default bytes: ", def)
@@ -349,10 +348,15 @@ function printDeviceInfo(device: Device) {
     console.log("   Chip Model: ", device.getChipModel())
     console.log("   Chip ID: ", device.getChipID())
     console.log("   Bootloader Info: ", device.getBootloaderInfo())
+
     printNvmInfo(device);
     printLedInfo(device)
     printStreamInfo(device)
-    printChannelInfo(device)
+    try{
+        printChannelInfo(device)
+    }catch(e) {
+        console.error(e)
+    }
     printChannelSpecificinfo(device)
     printDecoderInfo(device)
     printSupplyInfo(device)
@@ -360,11 +364,14 @@ function printDeviceInfo(device: Device) {
     printSettingInfo(device)
     printCustomEnumInfo(device)
     printSettingCategoryInfo(device)
-    printSettingInfo(device)
     printLowLevelInfo(device)
     printRfPowerInfo(device)
     printRadioInfo(device)
-    printRemoteInfo(device)
+    try{
+        printRemoteInfo(device)
+    } catch(e){
+        console.error(e)
+    }
     printBootloaderInfo(device)
 }
 

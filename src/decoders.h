@@ -521,12 +521,12 @@ public:
         ob.Set("bits_per_sample", channel->bits_per_sample);
         ob.Set("channel_type", channel->channel_type);
         Napi::Array chunks = Napi::Array::New(info.Env(), channel->chunk_count);
-        for (int i = 0; i < channel->chunk_count; i++)
-        {
-            Napi::Uint8Array chunk = Napi::Uint8Array::New(info.Env(), channel->chunk_lengths[i]);
-            memcpy(chunk.Data(), channel->chunks[i], channel->chunk_lengths[i]);
-            chunks[i] = chunk;
-        }
+        //for (int i = 0; i < channel->chunk_count; i++)
+        //{
+        //    Napi::Uint8Array chunk = Napi::Uint8Array::New(info.Env(), channel->chunk_lengths[i]);
+        //    memcpy(chunk.Data(), channel->chunks[i], channel->chunk_lengths[i]);
+        //    chunks[i] = chunk;
+        //}
         ob.Set("chunks", chunks);
         Napi::Float32Array coefs = Napi::Float32Array::New(info.Env(), channel->coefficients_length);
         for (int i = 0; i < channel->coefficients_length; i++)
