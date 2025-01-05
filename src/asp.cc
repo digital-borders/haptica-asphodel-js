@@ -423,6 +423,9 @@ public:
                                                                     InstanceMethod("getUnitAscii", &UnitFormatter::getUnitAscii),
                                                                     InstanceMethod("getUnitHtml", &UnitFormatter::getUnitHtml),
                                                                     InstanceMethod("getUnitUtf8", &UnitFormatter::getUnitUtf8),
+                                                                    InstanceMethod("getConversionScale", &UnitFormatter::getConversionScale),
+                                                                    InstanceMethod("getConversionOffset", &UnitFormatter::getConversionOffset),
+                                                                    
                                                                 });
 
         Napi::Object *ob = env.GetInstanceData<Napi::Object>();
@@ -520,6 +523,14 @@ public:
         }
 
         return Napi::String::New(info.Env(), this->formatter->unit_ascii);
+    }
+
+    Napi::Value getConversionOffset(const Napi::CallbackInfo &info){
+        return Napi::Number::New(info.Env(), this->formatter->conversion_offset);
+    }
+
+    Napi::Value getConversionScale(const Napi::CallbackInfo &info){
+        return Napi::Number::New(info.Env(), this->formatter->conversion_scale);
     }
 
     ~UnitFormatter()

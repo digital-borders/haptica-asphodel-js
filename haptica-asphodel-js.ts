@@ -95,6 +95,10 @@ export type UnitFormatter = {
     getUnitAscii:()=>string,
     getUnitHtml:()=>string,
     getUnitUtf8:()=>string
+
+    getConversionScale: ()=>number,
+    getConversionOffset:()=>number,
+    
     new(unit_type: number, minimum: number, maximum: number, resolution: number, use_metric: boolean): UnitFormatter,
 }
 
