@@ -100,7 +100,7 @@ function createDeviceInfo(device: Device): DeviceInfo {
                         console.log("channel_closure.counter_time_scale != 0", time)
                     }
                     for(let sub = 0; sub < subchannels; sub++) {
-                        console.log(channel_closure.unit_formatter.FormatBare(256, data[sample*subchannels+sub]))
+                        console.log(channel_closure.unit_formatter.FormatBare(data[sample*subchannels+sub]))
                     }
                 }
             })
