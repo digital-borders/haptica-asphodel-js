@@ -449,11 +449,8 @@ public:
 
         Napi::Int8Array buf = Napi::Int8Array::New(info.Env(), buffer_size);
 
-        int result = this->formatter->format_bare(this->formatter, (char *)buf.Data(), buf.ByteLength(), value);
-        if (result != 0)
-        {
-            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
-        }
+        this->formatter->format_bare(this->formatter, (char *)buf.Data(), buf.ByteLength(), value);
+=
         return buf;
     }
 
@@ -468,11 +465,7 @@ public:
 
         Napi::Int8Array buf = Napi::Int8Array::New(info.Env(), buffer_size);
 
-        int result = this->formatter->format_ascii(this->formatter, (char *)buf.Data(), buf.ByteLength(), value);
-        if (result != 0)
-        {
-            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
-        }
+        this->formatter->format_ascii(this->formatter, (char *)buf.Data(), buf.ByteLength(), value);
         return buf;
     }
 
@@ -487,11 +480,7 @@ public:
 
         Napi::Int8Array buf = Napi::Int8Array::New(info.Env(), buffer_size);
 
-        int result = this->formatter->format_html(this->formatter, (char *)buf.Data(), buf.ByteLength(), value);
-        if (result != 0)
-        {
-            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
-        }
+        this->formatter->format_html(this->formatter, (char *)buf.Data(), buf.ByteLength(), value);
         return buf;
     }
 
