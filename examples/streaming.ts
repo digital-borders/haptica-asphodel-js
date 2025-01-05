@@ -90,6 +90,7 @@ function createDeviceInfo(device: Device): DeviceInfo {
         dec.getDecoders().forEach((channel_decoder, j) => {
             let channel_info = stream_infos[i].getChannelInfos()[j];
             let channel_closure = createChannelClosure("", stream_info, channel_info, channel_decoder)
+            channel_decoder.setConversionFactor(channel_closure.unit_formatter.getConversionScale(), channel_closure.unit_formatter.getConversionOffset())
             channel_decoder.setDecodeCallback((counter, data, samples, subchannels) => {
                 for (let sample = 0; sample < samples; sample++) {
                     if(channel_closure.counter_time_scale == 0) {
