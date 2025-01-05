@@ -94,13 +94,17 @@ async function main() {
                 streaming_counts.transfer_count,
                 streaming_counts.timeout, (status, stream_data, packet_size, packet_count) => {
                     if (status == 0) {
-                        for (let packet = 0; packet < packet_count; i++) {
+                        for (let packet = 0; packet < packet_count; packet++) {
                             device_info_array[i].decoder.decode(stream_data.slice(packet * packet_size))
                         }
                     } else {
                         console.log(`Bad status ${status} in streaming packet callback`);
                     }
                 });
+
+                for (let j = 0; j < device_info_array[i].stream_count; j++) {
+                    devices[i].enableStream(j, false);
+                }
         }
 
         await click("Press any key to restart data collection...\n");
