@@ -444,7 +444,7 @@ public:
         {
             Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
         }
-        double value = info[1].As<Napi::Number>().DoubleValue();
+        double value = info[0].As<Napi::Number>().DoubleValue();
         char buf [256] ={};
         int result = this->formatter->format_html(this->formatter, buf, 256, value);
         if(result < 0) {
@@ -460,7 +460,7 @@ public:
         {
             Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
         }
-        double value = info[1].As<Napi::Number>().DoubleValue();
+        double value = info[0].As<Napi::Number>().DoubleValue();
         char buf [256] ={};
         int result = this->formatter->format_html(this->formatter, buf, 256, value);
         if(result < 0) {
@@ -476,7 +476,7 @@ public:
         {
             Napi::Error::New(info.Env(), "Expects 1 arguments").ThrowAsJavaScriptException();
         }
-        double value = info[1].As<Napi::Number>().DoubleValue();
+        double value = info[0].As<Napi::Number>().DoubleValue();
         char buf [256] ={};
         int result = this->formatter->format_html(this->formatter, buf, 256, value);
         if(result < 0) {
