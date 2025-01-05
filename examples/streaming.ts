@@ -72,16 +72,19 @@ function createDeviceInfo(device: Device): DeviceInfo {
 
     let decoder = createDeviceDecoder(stream_infos, stream_count.filler_bits, stream_count.id_bits);
 
+    let serial_number = device.getSerialNumber();
+    
     decoder.setUnknownIDCallback((id) => {
-        console.log(`Unknown stream id ${id} on ${device.getSerialNumber()}`)
+        console.log(`Unknown stream id ${id} on ${serial_number}`)
     })
 
     let decs = decoder.getDecoders();
 
+
     decs.forEach((dec, i) => {
         let stream_info = stream_infos[i].getStreamInfo();
         dec.setLostPacketCallback((current, last) => {
-            console.log(`Lost ${current - last - 1} from ${device.getSerialNumber()} stream ${i} `)
+            console.log(`Lost ${current - last - 1} from ${} stream ${i} `)
         })
 
         dec.getDecoders().forEach((channel_decoder, j) => {
@@ -145,7 +148,7 @@ async function main() {
                 streaming_counts.transfer_count,
                 streaming_counts.timeout, (status, stream_data, packet_size, packet_count) => {
                     if (status == 0) {
-                        for (let packet = 0; packet < packet_count; i++) {
+                        for (let packet = 0; packet < packet_count; packet++) {
                             device_info_array[i].decoder.decode(stream_data.slice(packet * packet_size))
                         }
                     } else {

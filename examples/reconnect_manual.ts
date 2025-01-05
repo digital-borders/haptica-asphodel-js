@@ -45,16 +45,18 @@ function createDeviceInfo(device: Device): DeviceInfo {
     let decoder = createDeviceDecoder(stream_infos, stream_count.filler_bits, stream_count.id_bits);
     let decs = decoder.getDecoders();
 
+    let serial_number = device.getSerialNumber();
+
     decs.forEach((dec, i) => {
         dec.setLostPacketCallback((current, last) => {
-            console.log(`Lost ${current - last - 1} from ${device.getSerialNumber()} stream ${i} `)
+            console.log(`Lost ${current - last - 1} packets from ${serial_number} stream ${i} `)
         })
     })
 
 
     return {
         stream_count: stream_count.count,
-        serial_number: device.getSerialNumber(),
+        serial_number: serial_number,
         decoder: decoder,
         info_array: stream_infos
     }
