@@ -9,32 +9,33 @@ async function main() {
 
     const devices = USBFindDevices(1);
     console.log(`Found ${devices.length} devices!`)
-    devices.forEach((device) => {
-    device.open()
-    
+    //devices.forEach((device) => {
+    for (let device of devices) {
+        device.open()
+        if (device.supportsRadioCommands()) {
+            console.log("scanning fo remotes devices....")
 
-    if (device.supportsRadioCommands()) {
-        console.log("scanning fo remotes devices....")
-        
-        device.startRadioScan()
-        
+            device.startRadioScan()
 
-        setTimeout(()=>{
-            
-            device.stopRadio()
-            let serials = device.getRadioScanResults(255)
-            let sorted = serials.sort();
-            console.log("Radio Scan results: ", sorted)
+            await new Promise((resolve) => {
 
-            device.close()
-        }, 1000)
-        
+                setTimeout(() => {
+
+                    device.stopRadio()
+                    let serials = device.getRadioScanResults(255)
+                    let sorted = serials.sort();
+                    console.log("Radio Scan results: ", sorted)
+
+                    device.close()
+                }, 1000)
+            })
+
+        }
+
     }
-    
-})
 }
 
 
-main().then(()=>{
+main().then(() => {
     USBDeInit();
 })
