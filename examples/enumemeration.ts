@@ -403,7 +403,9 @@ async function main() {
 
     console.log(`Found ${devices.length} devices!`)
 
-    devices.forEach((device) => {
+    //devices.forEach((device) => {
+    for (let device of devices) {
+
         device.open()
         printDeviceInfo(device)
 
@@ -412,23 +414,30 @@ async function main() {
             device.startRadioScan()
 
 
-            device.stopRadio()
-            let serials = device.getRadioScanResults(255)
+            await new Promise((resolve) => {
 
-            let sorted = serials.sort();
-            console.log("Radio Scan results: ", sorted)
-            sorted.forEach((serial) => {
-                printRemoteDeviceInfo(device, serial)
+                setTimeout(() => {
+
+                    device.stopRadio()
+                    let serials = device.getRadioScanResults(255)
+                    let sorted = serials.sort();
+                    console.log("Radio Scan results: ", sorted)
+
+                    sorted.forEach((serial) => {
+                        printRemoteDeviceInfo(device, serial)
+                    })
+
+                    device.close()
+                }, 1000)
             })
         }
-
-        device.close()
-    })
+    }
 
 }
 
 TCPInit();
 USBInit();
-main()
-TCPDeinit();
-USBDeInit()
+main().then(()=>{
+    TCPDeinit();
+    USBDeInit()
+})
