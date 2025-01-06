@@ -415,9 +415,7 @@ async function main() {
 
 
             await new Promise((resolve) => {
-
                 setTimeout(() => {
-
                     device.stopRadio()
                     let serials = device.getRadioScanResults(255)
                     let sorted = serials.sort();
@@ -427,10 +425,14 @@ async function main() {
                         printRemoteDeviceInfo(device, serial)
                     })
 
-                    device.close()
+                    resolve(0)
                 }, 1000)
             })
         }
+    }
+
+    for(let device of devices) {
+        device.close()
     }
 
 }
