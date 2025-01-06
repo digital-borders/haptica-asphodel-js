@@ -119,7 +119,6 @@ function createDeviceInfo(device: Device): DeviceInfo {
 async function stream(devices: Device[]) {
 
     while (true) {
-        let devices = USBFindDevices(10);
 
         let device_info_array: DeviceInfo[] = [];
         for (let device of devices) {
