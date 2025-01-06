@@ -391,7 +391,6 @@ function printRemoteDeviceInfo(dev: Device, serial: number) {
         return
     }
     printDeviceInfo(remote)
-    remote.stopRadio()
     remote.close()
 }
 
@@ -418,8 +417,6 @@ async function main() {
         if (device.supportsRadioCommands()) {
             console.log("scanning fo remotes devices")
             device.startRadioScan()
-
-
             await new Promise((resolve) => {
                 setTimeout(() => {
                     device.stopRadio()
