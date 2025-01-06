@@ -1,19 +1,4 @@
-import * as readline from "readline";
 import { ChannelInfo, createDeviceDecoder, Device, DeviceDecoder, getStreamingCounts, StreamAndChannels, StreamInfo, USBDeInit, USBFindDevices, USBInit, USBPollDevices } from "../haptica-asphodel-js";
-
-function click(message) {
-    return new Promise((resolve) => {
-        let rl = readline.createInterface({
-            input: process.stdin,
-            output: process.stdout
-        });
-
-        rl.question(message, (answer) => {
-            resolve(answer)
-            rl.close()
-        })
-    })
-}
 
 type DeviceInfo = {
     decoder: DeviceDecoder,
@@ -71,8 +56,8 @@ async function main() {
         console.log(`Found ${devices.length} devices`);
 
         if (devices.length == 0) {
-            await click("No Devices Found! Press any key to rescan...\n");
-            continue;
+            console.log("No Devices Found!...\n");
+            return
         }
 
         let device_info_array: DeviceInfo[] = [];
@@ -109,11 +94,10 @@ async function main() {
                 }
         }
 
-       // await click("Press any key to restart data collection...\n");
 
-       while(true) {
-        USBPollDevices(100);
-       }
+        for(let polls = 0; polls < 50; polls++){
+            USBPollDevices(100)
+        }
 
         for (let i = 0; i < devices.length; i++) {
             console.log(`Disabling ${device_info_array[i].stream_count} streams from ${device_info_array[i].serial_number}`)

@@ -1,26 +1,4 @@
-import * as readline from "readline";
 import { ChannelDecoder, ChannelInfo, createDeviceDecoder, Device, DeviceDecoder, getStreamingCounts, StreamAndChannels, StreamInfo, UnitFormatter, USBDeInit, USBFindDevices, USBInit, USBPollDevices } from "../haptica-asphodel-js";
-
-function click(message: string) {
-    return new Promise((resolve) => {
-        let rl = readline.createInterface({
-            input: process.stdin,
-            output: process.stdout
-        });
-
-        let loop = true;
-
-        rl.question(message, (answer) => {
-            resolve(answer)
-            rl.close()
-            loop = false;
-        })
-
-        while(loop) {
-            USBPollDevices(100);
-        }
-    })
-}
 
 type ChannelClosure = {
     unit_formatter: UnitFormatter,
@@ -162,6 +140,9 @@ async function stream(devices: Device[]) {
         }
 
 
+        for(let polls = 0; polls < 50; polls++){
+            USBPollDevices(100)
+        }
 
 
         for (let i = 0; i < devices.length; i++) {
