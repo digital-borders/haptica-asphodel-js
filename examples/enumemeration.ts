@@ -383,9 +383,15 @@ function printRemoteDeviceInfo(dev: Device, serial: number) {
     let remote = dev.getRemoteDevice()
     remote.open()
     dev.connectRadio(serial)
-    remote.waitForConnect(1000);
+    try {
+        remote.waitForConnect(1000);
+
+    } catch (e) {
+        console.error(e);
+        return
+    }
     printDeviceInfo(remote)
-    dev.stopRadio()
+    remote.stopRadio()
     remote.close()
 }
 
