@@ -8,10 +8,17 @@ function click(message: string) {
             output: process.stdout
         });
 
+        let loop = true;
+
         rl.question(message, (answer) => {
             resolve(answer)
             rl.close()
+            loop = false;
         })
+
+        while(loop) {
+            USBPollDevices(100);
+        }
     })
 }
 
@@ -155,9 +162,7 @@ async function stream(devices: Device[]) {
         }
 
 
-        while(true) {
-            USBPollDevices(100);
-        }
+
 
         for (let i = 0; i < devices.length; i++) {
             console.log(`Disabling ${device_info_array[i].stream_count} streams from ${device_info_array[i].serial_number}`)
