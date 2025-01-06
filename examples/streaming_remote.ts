@@ -103,8 +103,6 @@ function createDeviceInfo(device: Device): DeviceInfo {
 
 async function stream(devices: Device[]) {
 
-    while (true) {
-
         let device_info_array: DeviceInfo[] = [];
         for (let device of devices) {
             device.open();
@@ -155,8 +153,6 @@ async function stream(devices: Device[]) {
             devices[i].poll(10);
             devices[i].close();
         }
-
-    }
 
 }
 

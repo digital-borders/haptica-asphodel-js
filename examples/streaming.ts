@@ -103,8 +103,6 @@ function createDeviceInfo(device: Device): DeviceInfo {
 }
 
 async function main() {
-
-    while (true) {
         let devices = USBFindDevices(10);
 
         console.log(`Found ${devices.length} devices`);
@@ -162,9 +160,6 @@ async function main() {
             devices[i].poll(10);
             devices[i].close();
         }
-
-    }
-
 }
 
 USBInit()
