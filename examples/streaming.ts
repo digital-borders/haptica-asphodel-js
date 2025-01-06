@@ -1,7 +1,6 @@
 import * as readline from "readline";
 import { ChannelDecoder, ChannelInfo, createDeviceDecoder, Device, DeviceDecoder, getStreamingCounts, StreamAndChannels, StreamInfo, UnitFormatter, USBDeInit, USBFindDevices, USBInit, USBPollDevices } from "../haptica-asphodel-js";
 
-
 function click(message: string) {
     return new Promise((resolve) => {
         let rl = readline.createInterface({
@@ -15,7 +14,6 @@ function click(message: string) {
         })
     })
 }
-
 
 type ChannelClosure = {
     unit_formatter: UnitFormatter,
@@ -164,13 +162,8 @@ async function main() {
                 }
         }
 
-        var keep_polling = true
-        
-        click("Press any key to restart data collection...\n").then(()=>{
-            keep_polling = false
-        });
 
-        while(keep_polling) {
+        while(true) {
             USBPollDevices(100);
         }
 
