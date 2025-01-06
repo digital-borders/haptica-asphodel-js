@@ -421,6 +421,8 @@ async function main() {
                 printRemoteDeviceInfo(device, serial)
             })
         }
+
+        device.close()
     })
 
 }
