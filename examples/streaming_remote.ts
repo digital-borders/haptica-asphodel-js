@@ -181,7 +181,6 @@ async function main() {
 
                         try {
                             remote.waitForConnect(1000);
-                    
                         } catch (e) {
                             console.error(e);
                             return

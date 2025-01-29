@@ -369,9 +369,9 @@ export type StreamAndChannels = {
 export const StreamAndChannels: StreamAndChannels = asp.StreamAndChannels;
 
 export type UnitFormatter = {
-    FormatBare: (value: number) => Uint8Array,
-    FormatAscii: (value: number) => Uint8Array,
-    FormatHtml: (value: number) => Uint8Array,
+    FormatBare: (value: number) => string,
+    FormatAscii: (value: number) => string,
+    FormatHtml: (value: number) => string,
     
     getUnitAscii:()=>string,
     getUnitHtml:()=>string,
