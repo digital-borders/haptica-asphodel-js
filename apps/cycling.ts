@@ -180,7 +180,11 @@ function aquireData(device: Device, time: number) {
     let begin = Date.now();
 
     while(Date.now() - begin < time) {
-        device.poll(1000)
+       try {
+           device.poll(1000)
+       } catch(e) {
+        console.error(e)
+       }
     }
 
 
