@@ -96,7 +96,7 @@ function createDeviceInfo(device: Device): DeviceInfo {
                         console.log("channel_closure.counter_time_scale != 0", time)
                     }
                     for (let sub = 0; sub < subchannels; sub++) {
-                        console.log(channel_closure.unit_formatter.FormatBare(data[sample * subchannels + sub]))
+                        console.log(data[sample * subchannels + sub])
                     }
                 }
             })
@@ -145,7 +145,7 @@ async function checkSensorsConnected(device: Device) {
 }
 
 
-async function aquireData(device: Device, time: number) {
+function aquireData(device: Device, time: number) {
     var device_info = createDeviceInfo(device);
 
 
@@ -177,6 +177,12 @@ async function aquireData(device: Device, time: number) {
 
     //=================================
 
+    let begin = Date.now();
+
+    while(Date.now() - begin < time) {
+        device.poll(1000)
+    }
+
 
     console.log(`Disabling ${device_info.stream_count} streams from ${device_info.serial_number}`)
     for (let j = 0; j < device_info.stream_count; j++) {
@@ -192,12 +198,31 @@ function checkAllConnectedReceivers() {
 }
 
 
-function main() {
+async function main() {
     init()
     const devices = checkAllConnectedReceivers()
+    //devices.forEach(async (element, pos) => {
+    for(let i = 0;i < devices.length; i++) {
+        let element = devices[i];
+        element.open()
+        console.log(`device ${i} has serial: ${element.getSerialNumber()}`)
+        let sensors = await checkSensorsConnected(element)
+        console.log(`sensors found: ${sensors} length ${sensors.length}`)
+
+        console.log("sensor serail number: ", sensors[0].getSerialNumber())
+
+        console.log("acquire dara.....")
+
+        aquireData(sensors[0], 1000);
+
+        element.close()
+    }
+    //});
     deinit()
 }
 
 
-
+main().then(()=>{
+    console.log("main returnrd")
+})
 
