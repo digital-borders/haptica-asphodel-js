@@ -175,13 +175,7 @@ async function aquireData(device: Device, time: number) {
     }
 
 
-    await new Promise((resolve)=>{
-        setTimeout(()=>{
-            for(;;) {
-                device.poll(1000)
-            }
-        }, time)
-    })
+    //=================================
 
 
     console.log(`Disabling ${device_info.stream_count} streams from ${device_info.serial_number}`)
@@ -194,12 +188,7 @@ async function aquireData(device: Device, time: number) {
 }
 
 function checkAllConnectedReceivers() {
-    let usb_devices = USBFindDevices(50);
-    let tcp_devices = TCPFindDevices(50);
-    return {
-        tcp_devices: tcp_devices,
-        usb_devices: usb_devices
-    }
+    return USBFindDevices(50).concat(TCPFindDevices(50));
 }
 
 
