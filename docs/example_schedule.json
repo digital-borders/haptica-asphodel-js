@@ -1,0 +1,34 @@
+[
+    {
+        "receiver": "WMRP4290",         // The id of the receiver the sensor is connected to
+        "sensor":  "WM5552",            // The id of the sensor
+        "sensorChannel": 1,             // The channel of the sensor
+        "machine": "Compressor 2",      // The id of the machine the sensor is attached to (physical location)
+        "duration": 5,                  // The duration of the acquisition in seconds
+        "failure_delay": 20,            // The delay in seconds before retrying the acquisition in case of failure
+        "cron_start": "* * * * *",      // The cron expression for the start of the acquisition
+        "operations": [                 // The operations to perform on the data
+            {
+                "operation": "average", // The operation to perform
+                "params": {}            // The parameters of the operation
+            },
+            {
+                "operation": "stdDev",  // The operation to perform
+                "params": {}            // The parameters of the operation
+            },
+            {
+                "operation": "fft",                 // The operation to perform
+                "params": {                         // The parameters of the operation
+                    "frequencies": [50, 100, 150]   // The frequencies to extract
+                }
+            },
+            {
+                "operation": "save",    // The operation to perform
+                "params": {              // The parameters of the operation
+                    "path": "data"      // The path to save the data
+                }
+            }
+        ],
+        "mqttTopic": "sensors"          // The mqtt topic to publish the data to
+    }
+]
