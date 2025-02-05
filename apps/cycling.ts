@@ -71,6 +71,8 @@ function createDeviceInfo(device: Device, out:DeviceData): DeviceInfo {
         let channels: ChannelInfo[] = []
         let stream_info = stream.getInfo();
 
+        out.streams[i] = []
+
         if (stream_info.channel_count == 0) {
             throw new Error(`Error: stream ${i} has 0 channels`);
         }
