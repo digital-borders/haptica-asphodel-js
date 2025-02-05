@@ -45,7 +45,16 @@ function createChannelClosure(
     return channel_closure;
 }
 
-function createDeviceInfo(device: Device): DeviceInfo {
+function make2DArray(array: Float64Array, rows: number, columns: number, out: Float64Array[]) {
+    if(array.length != rows * columns) throw "length mismatch"
+    for(let i = 0; i < columns; i++) {
+        let beg = i * rows;
+        out.push(array.slice(beg, beg+rows))
+    }
+    return out
+}
+
+function createDeviceInfo(device: Device, out:any[]): DeviceInfo {
     let stream_count = device.getStreamCount();
     let stream_infos: StreamAndChannels[] = [];
     for (let i = 0; i < stream_count.count; i++) {
@@ -88,17 +97,18 @@ function createDeviceInfo(device: Device): DeviceInfo {
             let channel_closure = createChannelClosure(serial_number, stream_info, channel_info, channel_decoder)
             channel_decoder.setConversionFactor(channel_closure.unit_formatter.getConversionScale(), channel_closure.unit_formatter.getConversionOffset())
             channel_decoder.setDecodeCallback((counter, data, samples, subchannels) => {
-                for (let sample = 0; sample < samples; sample++) {
-                    if (channel_closure.counter_time_scale == 0) {
-                        console.log("channel_closure.counter_time_scale == 0", counter);
-                    } else {
-                        let time = counter * channel_closure.counter_time_scale + sample * channel_closure.sample_time_scale;
-                        console.log("channel_closure.counter_time_scale != 0", time)
-                    }
-                    for (let sub = 0; sub < subchannels; sub++) {
-                        console.log(data[sample * subchannels + sub])
-                    }
-                }
+                make2DArray(data, samples, subchannels, out);
+                //for (let sample = 0; sample < samples; sample++) {
+                //    if (channel_closure.counter_time_scale == 0) {
+                //        console.log("channel_closure.counter_time_scale == 0", counter);
+                //    } else {
+                //        let time = counter * channel_closure.counter_time_scale + sample * channel_closure.sample_time_scale;
+                //        console.log("channel_closure.counter_time_scale != 0", time)
+                //    }
+                //    for (let sub = 0; sub < subchannels; sub++) {
+                //        console.log(data[sample * subchannels + sub])
+                //    }
+                //}
             })
         })
     })
@@ -146,7 +156,10 @@ async function checkSensorsConnected(device: Device) {
 
 
 function aquireData(device: Device, time: number) {
-    var device_info = createDeviceInfo(device);
+
+
+    var samples: Float64Array[] = [];
+    var device_info = createDeviceInfo(device, samples);
 
 
     let response_time = 0.100; // 100 milliseconds
@@ -195,6 +208,8 @@ function aquireData(device: Device, time: number) {
 
     device.stopStreamingPackets();
     device.poll(10);
+
+    return samples
 }
 
 function checkAllConnectedReceivers() {
@@ -205,7 +220,7 @@ function checkAllConnectedReceivers() {
 async function main() {
     init()
     const devices = checkAllConnectedReceivers()
-    //devices.forEach(async (element, pos) => {
+
     for(let i = 0;i < devices.length; i++) {
         let element = devices[i];
         element.open()
@@ -217,11 +232,16 @@ async function main() {
 
         console.log("acquire dara.....")
 
-        aquireData(sensors[0], 1000);
+        let samples = aquireData(sensors[0], 1000);
+
+        console.log("-----------samples----------------")
+        console.log(samples)
+        console.log("-----------samples----------------")
+
 
         element.close()
     }
-    //});
+
     deinit()
 }
 
