@@ -54,7 +54,16 @@ function make2DArray(array: Float64Array, rows: number, columns: number, out: Fl
     return out
 }
 
-function createDeviceInfo(device: Device, out:any[]): DeviceInfo {
+class DeviceData {
+    serial_number: string
+    streams: {channel: number, values: Float64Array[]}[][]
+
+    constructor() {
+        this.streams = []
+    }
+}
+
+function createDeviceInfo(device: Device, out:DeviceData): DeviceInfo {
     let stream_count = device.getStreamCount();
     let stream_infos: StreamAndChannels[] = [];
     for (let i = 0; i < stream_count.count; i++) {
@@ -77,6 +86,7 @@ function createDeviceInfo(device: Device, out:any[]): DeviceInfo {
     let decoder = createDeviceDecoder(stream_infos, stream_count.filler_bits, stream_count.id_bits);
 
     let serial_number = device.getSerialNumber();
+    out.serial_number = serial_number;
 
     decoder.setUnknownIDCallback((id) => {
         console.log(`Unknown stream id ${id} on ${serial_number}`)
@@ -86,18 +96,22 @@ function createDeviceInfo(device: Device, out:any[]): DeviceInfo {
 
 
     decs.forEach((dec, i) => {
-        let stream_info = stream_infos[i].getStreamInfo();
+        //let stream_info = stream_infos[i].getStreamInfo();
 
         dec.setLostPacketCallback((current, last) => {
             console.log(`Lost ${current - last - 1} from ${serial_number} stream ${i} `)
         })
 
         dec.getDecoders().forEach((channel_decoder, j) => {
-            let channel_info = stream_infos[i].getChannelInfos()[j];
-            let channel_closure = createChannelClosure(serial_number, stream_info, channel_info, channel_decoder)
-            channel_decoder.setConversionFactor(channel_closure.unit_formatter.getConversionScale(), channel_closure.unit_formatter.getConversionOffset())
+            //let channel_info = stream_infos[i].getChannelInfos()[j];
+            //let channel_closure = createChannelClosure(serial_number, stream_info, channel_info, channel_decoder)
+            //channel_decoder.setConversionFactor(channel_closure.unit_formatter.getConversionScale(), channel_closure.unit_formatter.getConversionOffset())
             channel_decoder.setDecodeCallback((counter, data, samples, subchannels) => {
-                make2DArray(data, samples, subchannels, out);
+                let arr = []
+                make2DArray(data, samples, subchannels, arr);
+                out.streams[i].push({
+                    channel: j, values: arr
+                });
                 //for (let sample = 0; sample < samples; sample++) {
                 //    if (channel_closure.counter_time_scale == 0) {
                 //        console.log("channel_closure.counter_time_scale == 0", counter);
@@ -158,7 +172,7 @@ async function checkSensorsConnected(device: Device) {
 function aquireData(device: Device, time: number) {
 
 
-    var samples: Float64Array[] = [];
+    var samples = new DeviceData();
     var device_info = createDeviceInfo(device, samples);
 
 
