@@ -37,7 +37,16 @@
           "operation": "save", // The operation to perform
           "params": {
             // The parameters of the operation
-            "path": "data" // The path to save the data
+            "path": "data", // The path to save the data
+            "type": "raw" // The type of the data: raw is the .apd file with the raw data from sensor at full speed
+          }
+        },
+        {
+          "operation": "save", // The operation to perform
+          "params": {
+            // The parameters of the operation
+            "path": "data", // The path to save the data
+            "type": "processed" // The type of the data: processed is the .json file with the message that we published to mqtt
           }
         }
       ],
