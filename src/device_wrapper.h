@@ -97,6 +97,7 @@ public:
                                              InstanceMethod("getBuildDate", &DeviceWrapper::getBuildDate),
                                              InstanceMethod("getCommitID", &DeviceWrapper::getCommitId),
                                              InstanceMethod("getRepoBranch", &DeviceWrapper::getRepoBranch),
+                                             InstanceMethod("getRepoName", &DeviceWrapper::getRepoName),
                                              InstanceMethod("getChipFamily", &DeviceWrapper::getChipFamily),
                                              InstanceMethod("getChipModel", &DeviceWrapper::getChipModel),
                                              InstanceMethod("eraseNVM", &DeviceWrapper::eraseNvm),
@@ -734,63 +735,74 @@ public:
         }
         Napi::Object ob = Napi::Object::New(info.Env());
 
+        Napi::Object ob2 = Napi::Object::New(info.Env());
         switch (in.setting_type)
         {
         case SETTING_TYPE_BYTE:
-            ob.Set("nvm_word", in.u.byte_setting.nvm_word);
-            ob.Set("nvm_word_byte", in.u.byte_setting.nvm_word_byte);
+            ob2.Set("nvm_word", in.u.byte_setting.nvm_word);
+            ob2.Set("nvm_word_byte", in.u.byte_setting.nvm_word_byte);
+            ob2.Set("repr_name", "AsphodelByteSetting");
             break;
         case SETTING_TYPE_BYTE_ARRAY:
-            ob.Set("length_nvm_word", in.u.byte_array_setting.length_nvm_word);
-            ob.Set("maximum_length", in.u.byte_array_setting.maximum_length);
-            ob.Set("length_nvm_word_byte", in.u.byte_array_setting.length_nvm_word_byte);
-            ob.Set("nvm_word", in.u.byte_array_setting.nvm_word);
+            ob2.Set("length_nvm_word", in.u.byte_array_setting.length_nvm_word);
+            ob2.Set("maximum_length", in.u.byte_array_setting.maximum_length);
+            ob2.Set("length_nvm_word_byte", in.u.byte_array_setting.length_nvm_word_byte);
+            ob2.Set("nvm_word", in.u.byte_array_setting.nvm_word);
+            ob2.Set("repr_name", "AsphodelByteArraySetting");
+
             break;
         case SETTING_TYPE_STRING:
-            ob.Set("maximum_length", in.u.string_setting.maximum_length);
-            ob.Set("nvm_word", in.u.string_setting.nvm_word);
+            ob2.Set("maximum_length", in.u.string_setting.maximum_length);
+            ob2.Set("nvm_word", in.u.string_setting.nvm_word);
+            ob2.Set("repr_name", "AsphodelStringSetting");
             break;
         case SETTING_TYPE_INT32:
-            ob.Set("maximum", in.u.int32_setting.maximum);
-            ob.Set("minimum", in.u.int32_setting.minimum);
-            ob.Set("nvm_word", in.u.int32_setting.nvm_word);
+            ob2.Set("maximum", in.u.int32_setting.maximum);
+            ob2.Set("minimum", in.u.int32_setting.minimum);
+            ob2.Set("nvm_word", in.u.int32_setting.nvm_word);
+            ob2.Set("repr_name", "AsphodelInt32Setting");
             break;
         case SETTING_TYPE_INT32_SCALED:
-            ob.Set("maximum", in.u.int32_scaled_setting.maximum);
-            ob.Set("minimum", in.u.int32_scaled_setting.minimum);
-            ob.Set("nvm_word", in.u.int32_scaled_setting.nvm_word);
-            ob.Set("offset", in.u.int32_scaled_setting.offset);
-            ob.Set("scale", in.u.int32_scaled_setting.scale);
-            ob.Set("unit_type", in.u.int32_scaled_setting.unit_type);
+            ob2.Set("maximum", in.u.int32_scaled_setting.maximum);
+            ob2.Set("minimum", in.u.int32_scaled_setting.minimum);
+            ob2.Set("nvm_word", in.u.int32_scaled_setting.nvm_word);
+            ob2.Set("offset", in.u.int32_scaled_setting.offset);
+            ob2.Set("scale", in.u.int32_scaled_setting.scale);
+            ob2.Set("unit_type", in.u.int32_scaled_setting.unit_type);
+            ob2.Set("repr_name", "AsphodelInt32ScaledSetting");
             break;
         case SETTING_TYPE_FLOAT:
-            ob.Set("maximum", in.u.float_setting.maximum);
-            ob.Set("minimum", in.u.float_setting.minimum);
-            ob.Set("nvm_word", in.u.float_setting.nvm_word);
-            ob.Set("offset", in.u.float_setting.offset);
-            ob.Set("scale", in.u.float_setting.scale);
-            ob.Set("unit_type", in.u.float_setting.unit_type);
+            ob2.Set("maximum", in.u.float_setting.maximum);
+            ob2.Set("minimum", in.u.float_setting.minimum);
+            ob2.Set("nvm_word", in.u.float_setting.nvm_word);
+            ob2.Set("offset", in.u.float_setting.offset);
+            ob2.Set("scale", in.u.float_setting.scale);
+            ob2.Set("unit_type", in.u.float_setting.unit_type);
+            ob2.Set("repr_name", "AsphodelFloatSetting");
             break;
         case SETTING_TYPE_FLOAT_ARRAY:
-            ob.Set("length_nvm_word", in.u.float_array_setting.length_nvm_word);
-            ob.Set("length_nvm_word_byte", in.u.float_array_setting.length_nvm_word_byte);
-            ob.Set("maximum", in.u.float_array_setting.maximum);
-            ob.Set("maximum_length", in.u.float_array_setting.maximum_length);
-            ob.Set("minimum", in.u.float_array_setting.minimum);
-            ob.Set("nvm_word", in.u.float_array_setting.nvm_word);
-            ob.Set("offset", in.u.float_array_setting.offset);
-            ob.Set("scale", in.u.float_array_setting.scale);
-            ob.Set("unit_type", in.u.float_array_setting.unit_type);
+            ob2.Set("length_nvm_word", in.u.float_array_setting.length_nvm_word);
+            ob2.Set("length_nvm_word_byte", in.u.float_array_setting.length_nvm_word_byte);
+            ob2.Set("maximum", in.u.float_array_setting.maximum);
+            ob2.Set("maximum_length", in.u.float_array_setting.maximum_length);
+            ob2.Set("minimum", in.u.float_array_setting.minimum);
+            ob2.Set("nvm_word", in.u.float_array_setting.nvm_word);
+            ob2.Set("offset", in.u.float_array_setting.offset);
+            ob2.Set("scale", in.u.float_array_setting.scale);
+            ob2.Set("unit_type", in.u.float_array_setting.unit_type);
+            ob2.Set("repr_name", "AsphodelFloatSetting");
             break;
         case SETTING_TYPE_CUSTOM_ENUM:
-            ob.Set("custom_enum_index", in.u.custom_enum_setting.custom_enum_index);
-            ob.Set("nvm_word", in.u.custom_enum_setting.nvm_word);
-            ob.Set("nvm_word_byte", in.u.custom_enum_setting.nvm_word_byte);
+            ob2.Set("custom_enum_index", in.u.custom_enum_setting.custom_enum_index);
+            ob2.Set("nvm_word", in.u.custom_enum_setting.nvm_word);
+            ob2.Set("nvm_word_byte", in.u.custom_enum_setting.nvm_word_byte);
+            ob2.Set("repr_name", "AsphodelCustomEnumSetting");
             break;
-
         default:
+            ob2.Set("repr_name", "Unknown");
             break;
         }
+        ob.Set("u", ob2);
         ob.Set("name", Napi::String::New(info.Env(), (char *)in.name, in.name_length));
         Napi::Uint8Array arr = Napi::Uint8Array::New(info.Env(), in.default_bytes_length);
         memcpy(arr.Data(), in.default_bytes, in.default_bytes_length);
@@ -1397,7 +1409,7 @@ public:
 
         Napi::Object ob = Napi::Object::New(info.Env());
 
-        ob.Set("available", available);
+        ob.Set("available", Napi::Boolean::From<int>(info.Env(), available));
         ob.Set("channel_index", chi);
         ob.Set("invert", invert);
         ob.Set("scale", scale);
@@ -2502,6 +2514,18 @@ public:
         char buffer[128];
         memset(buffer, 0, sizeof(buffer));
         int result = asphodel_get_repo_branch_blocking(this->device, buffer, 128);
+        if (result != 0)
+        {
+            Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+        }
+        return Napi::String::New(info.Env(), buffer);
+    }
+
+    Napi::Value getRepoName(const Napi::CallbackInfo &info)
+    {
+        char buffer[128];
+        memset(buffer, 0, sizeof(buffer));
+        int result = asphodel_get_repo_name_blocking(this->device, buffer, 128);
         if (result != 0)
         {
             Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();

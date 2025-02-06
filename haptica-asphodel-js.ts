@@ -281,7 +281,7 @@ export const ACCEL_ENABLE_SELF_TEST = 0x01
 
 
 export type ChannelDecoder = {
-    getChannelName:()=>string,
+    getChannelName: () => string,
     decode: (counter: number, buffer: Uint8Array) => void,
     setConversionFactor: (scale: number, offset: number) => void,
     reset: () => void
@@ -299,7 +299,7 @@ export type StreamDecoder = {
     getLastCount: () => number,
     getCounterByteOffset: () => number,
     getChannels: () => number,
-    setLostPacketCallback: (callback: (current: number, last: number)=>void) => void,
+    setLostPacketCallback: (callback: (current: number, last: number) => void) => void,
     getDecoders: () => ChannelDecoder[],
     getUsedBits: () => number
 }
@@ -361,9 +361,9 @@ export type ChannelInfo = {
 }
 
 export type StreamAndChannels = {
-    getStreamInfo:()=> StreamInfo,
-    getChannelInfos:()=> ChannelInfo[],
-    new(stream_id: number, stream_info: StreamInfo, channel_infos: ChannelInfo[]):StreamAndChannels
+    getStreamInfo: () => StreamInfo,
+    getChannelInfos: () => ChannelInfo[],
+    new(stream_id: number, stream_info: StreamInfo, channel_infos: ChannelInfo[]): StreamAndChannels
 }
 
 export const StreamAndChannels: StreamAndChannels = asp.StreamAndChannels;
@@ -372,14 +372,14 @@ export type UnitFormatter = {
     FormatBare: (value: number) => string,
     FormatAscii: (value: number) => string,
     FormatHtml: (value: number) => string,
-    
-    getUnitAscii:()=>string,
-    getUnitHtml:()=>string,
-    getUnitUtf8:()=>string
 
-    getConversionScale: ()=>number,
-    getConversionOffset:()=>number,
-    
+    getUnitAscii: () => string,
+    getUnitHtml: () => string,
+    getUnitUtf8: () => string
+
+    getConversionScale: () => number,
+    getConversionOffset: () => number,
+
     new(unit_type: number, minimum: number, maximum: number, resolution: number, use_metric: boolean): UnitFormatter,
 }
 
@@ -387,7 +387,7 @@ export type UnitFormatter = {
 export const UnitFormatter: UnitFormatter = asp.UnitFormatter;
 
 export type Device = {
-    getUserTagLocations:()=>Uint32Array,
+    getUserTagLocations: () => Uint32Array,
     close: () => void,
     supportsRadioCommands: () => boolean,
     supportsRemoteCommands: () => boolean,
@@ -401,6 +401,7 @@ export type Device = {
 
     getCommitID: () => string,
     getRepoBranch: () => string,
+    getRepoName: () => string,
     getChipFamily: () => string,
     getChipModel: () => string,
     eraseNVM: () => void,
@@ -412,7 +413,7 @@ export type Device = {
     writeNVMSection: (start_address: number, data: Uint8Array) => void,
     readNVMRaw: (start_address: number, length: number) => Uint8Array,
     readNVMSection: (start_address: number, length: number) => Uint8Array,
-    readUserTagString: (offset: number, length:number) => string,
+    readUserTagString: (offset: number, length: number) => string,
     getNVMModified: () => number,
     getNVMHash: () => string,
     getSettingHash: () => string,
@@ -530,7 +531,7 @@ export type Device = {
         warmup: number
     }
     getStreamRateInfo: (index: number) => {
-        available: number,
+        available: boolean,
         channel_index: number,
         invert: number,
         scale: number,
@@ -573,7 +574,7 @@ export type Device = {
     },
     getBootloaderBlockSizes: (length: number) => {
         result: Uint16Array,
-        length:number
+        length: number
     },
     startBootloaderPage: (page_number: number, nonce: Uint8Array) => void,
     writeBootloaderCodeBlock: (data: Uint8Array) => number,
@@ -623,7 +624,12 @@ export type Device = {
 
     getSettingCount: () => number,
     getSettingName: (index: number) => string,
-    getSettingInfo: (index: number) => any
+    getSettingInfo: (index: number) => {
+        u: any,
+        name: string,
+        default_bytes: Uint8Array,
+        setting_type: number
+    }
     getSettingDefault: (index: number, length: number) => {
         result: Uint8Array,
         length: number
@@ -717,14 +723,272 @@ export const TCPCreateDevice: (host: string, port: number, timeout: number, seri
 export const createChannelDecoder: (channel_info: ChannelInfo, channel_bit_offset: number) => ChannelDecoder = asp.createChannelDecoder
 export const createDeviceDecoder: (stream_and_channels: StreamAndChannels[], filler_bits: number, id_bits: number) => DeviceDecoder = asp.createDeviceDecoder
 export const createStreamDecoder: (stream_and_channels: StreamAndChannels, stream_bit_offset: number) => StreamDecoder = asp.createStreamDecoder
-export const getStreamingCounts: (stream_and_channels: StreamAndChannels[], response_time: number, buffer_time: number, timeout:number) => {
+export const getStreamingCounts: (stream_and_channels: StreamAndChannels[], response_time: number, buffer_time: number, timeout: number) => {
     packet_count: number,
     transfer_count: number,
-    timeout:number
+    timeout: number
 } = asp.getStreamingCounts
 
-export const getLibraryProtocalVersion:()=>number = asp.getLibraryProtocalVersion
-export const getLibraryProtocalVersionString:()=>string = asp.getLibraryProtocalVersionString
-export const getLibraryBuildInfo:()=>string = asp.getLibraryBuildInfo
-export const getLibraryBuildDate:()=>string = asp.getLibraryBuildDate
+export const getLibraryProtocalVersion: () => number = asp.getLibraryProtocalVersion
+export const getLibraryProtocalVersionString: () => string = asp.getLibraryProtocalVersionString
+export const getLibraryBuildInfo: () => string = asp.getLibraryBuildInfo
+export const getLibraryBuildDate: () => string = asp.getLibraryBuildDate
 
+function channelInfoGetState(ci: ChannelInfo) {
+    const self = ci.getInfo()
+    return {
+        "_name_array": self.name,
+        "name_length": self.name.length,
+        "channel_type": self.channel_type,
+        "unit_type": self.unit_type,
+        "filler_bits": self.filler_bits,
+        "data_bits": self.data_bits,
+        "samples": self.samples,
+        "bits_per_sample": self.bits_per_sample,
+        "minimum": self.minimum,
+        "maximum": self.maximum,
+        "resolution": self.resolution,
+        "_coefficients_array": self.coefficients,
+        "coefficients_length": self.coefficients.length,
+        "_chunk_list": self.chunks,
+        "_chunk_length_array": self.chunks.length,
+        "chunk_count": self.chunk_count
+    }
+}
+
+export function deviceToString(
+    device: Device,
+    streams_to_activate: number[],
+    stream_counts: number[],
+    schedule_id: string
+): string {
+    const board_info = device.getBoardInfo();
+    const tag_locations = device.getUserTagLocations();
+    const nvm_size = device.getNVMSize();
+    const channel_count = device.getChannelCount();
+    var calibrations: any[] = []
+    var channels: any[] = []
+    for (let i = 0; i < channel_count; i++) {
+        calibrations.push(device.getChannelCalibration(i).calibration)
+        let info = device.getChannelInfo(i);
+        channels.push(channelInfoGetState(info))
+    }
+
+    var ctrl_vars: any[] = [];
+    var ctrl_var_count = device.getCtrlVarCount();
+
+    for (let i = 0; i < ctrl_var_count; i++) {
+        const ctrl_var = device.getCtrlVar(i);
+        const ctrl_var_name = device.getCtrlVarName(i);
+        const ctrl_var_info = device.getCtrlVarInfo(i);
+
+        ctrl_vars.push([
+            ctrl_var_name,
+            [
+                ctrl_var_info.unit_type,
+                ctrl_var_info.minimum,
+                ctrl_var_info.maximum,
+                ctrl_var_info.scale,
+                ctrl_var_info.offset
+            ],
+            ctrl_var
+        ])
+    }
+
+    const custom_enum_counts_h = device.getCustomEnumCounts(256);
+    const custom_enum_counts = custom_enum_counts_h.result.slice(0, custom_enum_counts_h.length);
+    const custom_enums = {};
+    custom_enum_counts.forEach((count, j) => {
+        var names: string[] = []
+        for (let i = 0; i < count; i++) {
+            names.push(
+                device.getCustomEnumValueName(j, i)
+            )
+        }
+        custom_enums[j] = names
+    })
+
+    const led_settings: number[] = [];
+    const led_count = device.getLEDCount();
+    for (let i = 0; i < led_count; i++) {
+        led_settings.push(device.getLEDValue(i))
+    }
+
+    const rgb_settings: Uint8Array[] = [];
+    const rgb_count = device.getRGBCount();
+
+    for (let i = 0; i < rgb_count; i++) {
+        rgb_settings.push(device.getRGBValues(i))
+    }
+
+    const setting_category_count = device.getSettingCategoryCount();
+    var setting_categories: any[] = [];
+    for (let i = 0; i < setting_category_count; i++) {
+        let category: any[] = [];
+        category.push(device.getSettingCategoryName(i));
+        const catset = device.getSettingCategorySettings(i, 256);
+        category.push(catset.result.slice(0, catset.length))
+        setting_categories.push(category)
+    }
+
+    const setting_count = device.getSettingCount();
+    var settings: string[] = []
+    for (let i = 0; i < setting_count; i++) {
+        const setting_info = device.getSettingInfo(i);
+        const setting_name = getSettingTypeName(setting_info.setting_type);
+
+        var set = `<AsphodelSettingInfo {name=b'${setting_info.name}', name_length=${setting_info.name.length}, `
+        set += "default_bytes="
+
+        for (let idx = 0; idx < setting_info.default_bytes.length; idx++) {
+            set += setting_info.default_bytes[idx].toString(16)
+            if (idx != setting_info.default_bytes.length - 1) {
+                set += ", "
+            }
+        }
+
+        set += `default_bytes_length=${setting_info.default_bytes.length}, setting_type=${setting_info.setting_type} (${setting_name}), `
+
+        var u = "u=<" + setting_info.u.repr_name + " {";
+        const keys = Object.keys(setting_info.u)
+
+        for (let idx = 0; idx < keys.length; idx++) {
+            const key = keys[idx]
+            u += key
+            u += "="
+            u += setting_info[keys[idx]].toString()
+            if (idx != keys.length - 1) {
+                u += ", "
+            }
+        }
+
+        u += "}>"
+        set += u;
+        set += "}>"
+
+        settings.push(set)
+    }
+
+    const stream_count = device.getStreamCount()
+    var stream_rate_infos: any[] = []
+    for (let i = 0; i < stream_count.count; i++) {
+        const stream_rate_info = device.getStreamRateInfo(i)
+        stream_rate_infos.push([
+            stream_rate_info.available,
+            stream_rate_info.channel_index,
+            stream_rate_info.invert,
+            stream_rate_info.scale,
+            stream_rate_info.offset
+        ])
+    }
+
+    var streams: any[] = [];
+    for (let i = 0; i < stream_count.count; i++) {
+        const stream = device.getStream(i)
+        const self = stream.getInfo()
+        streams.push({
+            _channel_array: self.channel_index_list.slice(0, self.channel_count),
+            channel_count: self.channel_count,
+            filler_bits: self.filler_bits,
+            counter_bits: self.counter_bits,
+            rate: self.rate,
+            rate_error: self.rate_error,
+            warm_up_delay: self.warm_up_delay
+        })
+    }
+
+    const supply_count = device.getSupplyCount();
+    var supplies: any[] = []
+    var supply_results: any[] = []
+    for(let i = 0; i<supply_count;i++) {
+        const supply_name = device.getSupplyName(i);
+        const supply_info = device.getSupplyInfo(i);
+        supplies.push([
+            supply_name,
+            [
+                supply_info.unit_type,
+                supply_info.is_battery,
+                supply_info.nominal,
+                supply_info.scale,
+                supply_info.offset
+            ]
+        ])
+        const supply_result = device.checkSupply(i, 20);
+        supply_results.push([supply_result.measurement, supply_result.result])
+    }
+
+    const radio_ctrl_vars = device.getRadioCtrlVars(256);
+
+    var supports_device_mode  = true;
+    var device_mode: any = null;
+    try {
+        device_mode = device.getDeviceMode()
+    }catch(e) {
+        supports_device_mode = false;
+    }
+
+    var rf_power_status:any = null;
+    try {
+        rf_power_status = device.getRfPowerStatus()
+    }catch(e){}
+
+    return JSON.stringify({
+        board_info: [
+            board_info.info, board_info.rev
+        ],
+        bootloader_info: device.getBootloaderInfo(),
+        build_date: device.getBuildDate(),
+        build_info: device.getBuildInfo(),
+        library_build_date: getLibraryBuildDate(),
+        library_build_info: getLibraryBuildInfo(),
+        library_protocol_version: getLibraryProtocalVersion(),
+        location_string: device.getLocationString(),
+        max_incoming_param_length: device.getMaxIncomingParamLength(),
+        max_outgoing_param_length: device.getMaxOutgoingParamLength(),
+        nvm_hash: device.getNVMHash(),
+        nvm_modified: device.getNVMModified(),
+        serial_number: device.getSerialNumber(),
+        setting_hash: device.getSettingHash(),
+        stream_packet_length: device.getStreamPacketLength(),
+        supports_bootloader: device.supportsBootloaderCommands(),
+        supports_radio: device.supportsRadioCommands(),
+        supports_remote: device.supportsRemoteCommands(),
+        supports_rf_power: device.supportsRFPowerCommands(),
+        tag_locations: [
+            [tag_locations[0], tag_locations[1]],
+            [tag_locations[2], tag_locations[3]],
+            [tag_locations[4], tag_locations[5]],
+        ],
+        user_tag_1: device.readUserTagString(tag_locations[0], tag_locations[1]),
+        user_tag_2: device.readUserTagString(tag_locations[2], tag_locations[3]),
+        nvm: device.readNVMSection(0, nvm_size),
+        channel_calibration: calibrations,
+        channels: channels,
+        chip_family: device.getChipFamily(),
+        chip_id: device.getChipID(),
+        chip_model: device.getChipModel(),
+        commit_id: device.getCommitID(),
+        ctrl_vars: ctrl_vars,
+        custom_enums: custom_enums,
+        led_settings: led_settings,
+        protocol_version: device.getProtocalVersionString(),
+        repo_branch: device.getRepoBranch(),
+        repo_name: device.getRepoName(),
+        rgb_settings: rgb_settings,
+        setting_categories: setting_categories,
+        settings: settings,
+        stream_filler_bits: stream_count.filler_bits,
+        stream_id_bits: stream_count.id_bits,
+        stream_rate_info: stream_rate_infos,
+        streams: streams,
+        supplies: supplies,
+        supply_results: supply_results,
+        supports_device_mode: supports_device_mode,
+        device_mode: device_mode,
+        radio_ctrl_vars: radio_ctrl_vars.result.slice(0,radio_ctrl_vars.length),
+        rf_power_status: rf_power_status,
+        streams_to_activate: streams_to_activate,
+        stream_counts: stream_counts,
+        schedule_id: schedule_id
+    })
+}
