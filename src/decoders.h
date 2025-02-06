@@ -520,21 +520,23 @@ public:
         Napi::Object ob = Napi::Object::New(info.Env());
         ob.Set("bits_per_sample", channel->bits_per_sample);
         ob.Set("channel_type", channel->channel_type);
-        Napi::Array chunks = Napi::Array::New(info.Env(), channel->chunk_count);
-        for (int i = 0; i < channel->chunk_count; i++)
-        {
-            Napi::Uint8Array chunk = Napi::Uint8Array::New(info.Env(), channel->chunk_lengths[i]);
-            memcpy(chunk.Data(), channel->chunks[i], channel->chunk_lengths[i]);
-            chunks[i] = chunk;
-        }
-        ob.Set("chunks", chunks);
-        Napi::Float32Array coefs = Napi::Float32Array::New(info.Env(), channel->coefficients_length);
-        for (int i = 0; i < channel->coefficients_length; i++)
-        {
-            coefs[i] = channel->coefficients[i];
-        }
+        //Napi::Array chunks = Napi::Array::New(info.Env(), channel->chunk_count);
+        //for (int i = 0; i < channel->chunk_count; i++)
+        //{
+            //asphodel_get_channel_chunk_blocking()
+            //printf("============================= %d %d\n", i, channel->chunk_lengths);
+            //Napi::Uint8Array chunk = Napi::Uint8Array::New(info.Env(), channel->chunk_lengths[i]);
+            //memcpy(chunk.Data(), channel->chunks[i], channel->chunk_lengths[i]);
+            //chunks[i] = chunk;
+        //}
+        //ob.Set("chunks", chunks);
+        //Napi::Float32Array coefs = Napi::Float32Array::New(info.Env(), channel->coefficients_length);
+        //for (int i = 0; i < channel->coefficients_length; i++)
+        //{
+        //    coefs[i] = channel->coefficients[i];
+        //}
         
-        ob.Set("coefficients", coefs);
+        //ob.Set("coefficients", coefs);
         ob.Set("data_bits", channel->data_bits);
         ob.Set("filler_bits", channel->filler_bits);
         ob.Set("maximum", channel->maximum);
@@ -543,7 +545,7 @@ public:
         ob.Set("samples", channel->samples);
         ob.Set("unit_type", channel->unit_type);
         ob.Set("chunk_count", channel->chunk_count);
-        ob.Set("name", Napi::String::New(info.Env(), (char *)channel->name, channel->name_length));
+        //ob.Set("name", Napi::String::New(info.Env(), (char *)channel->name, channel->name_length));
         return ob;
     }
 
@@ -580,7 +582,7 @@ public:
 
     static Napi::Function GetClass(Napi::Env env)
     {
-        return DefineClass(env, "ChannelInfo", {InstanceMethod("getInfo", &StreamInfo::getInfo)});
+        return DefineClass(env,"StreamInfo", {InstanceMethod("getInfo", &StreamInfo::getInfo)});
     }
 
     Napi::Value getInfo(const Napi::CallbackInfo &info)

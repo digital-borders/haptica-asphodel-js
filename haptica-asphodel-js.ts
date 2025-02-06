@@ -331,8 +331,8 @@ export type ChannelInfo = {
     getInfo: () => {
         bits_per_sample: number,
         channel_type: number,
-        chunks: Uint8Array[],
-        coefficients: Float32Array
+        //chunks: Uint8Array[],
+        //coefficients: Float32Array
         data_bits: number,
         filler_bits: number,
         maximum: number,
@@ -340,7 +340,7 @@ export type ChannelInfo = {
         resolution: number,
         samples: number,
         unit_type: number,
-        name: string,
+        //name: string,
         chunk_count: number
     },
 
@@ -628,7 +628,8 @@ export type Device = {
         u: any,
         name: string,
         default_bytes: Uint8Array,
-        setting_type: number
+        setting_type: number,
+        repr_name: string
     }
     getSettingDefault: (index: number, length: number) => {
         result: Uint8Array,
@@ -734,26 +735,8 @@ export const getLibraryProtocalVersionString: () => string = asp.getLibraryProto
 export const getLibraryBuildInfo: () => string = asp.getLibraryBuildInfo
 export const getLibraryBuildDate: () => string = asp.getLibraryBuildDate
 
-function channelInfoGetState(ci: ChannelInfo) {
-    const self = ci.getInfo()
-    return {
-        "_name_array": self.name,
-        "name_length": self.name.length,
-        "channel_type": self.channel_type,
-        "unit_type": self.unit_type,
-        "filler_bits": self.filler_bits,
-        "data_bits": self.data_bits,
-        "samples": self.samples,
-        "bits_per_sample": self.bits_per_sample,
-        "minimum": self.minimum,
-        "maximum": self.maximum,
-        "resolution": self.resolution,
-        "_coefficients_array": self.coefficients,
-        "coefficients_length": self.coefficients.length,
-        "_chunk_list": self.chunks,
-        "_chunk_length_array": self.chunks.length,
-        "chunk_count": self.chunk_count
-    }
+function channelInfoGetState(ci: ChannelInfo, device: Device) {
+
 }
 
 export function deviceToString(
@@ -769,13 +752,48 @@ export function deviceToString(
     var calibrations: any[] = []
     var channels: any[] = []
     for (let i = 0; i < channel_count; i++) {
-        calibrations.push(device.getChannelCalibration(i).calibration)
+        try {
+            calibrations.push(device.getChannelCalibration(i).calibration)
+        } catch (e) { 
+            calibrations.push(null)
+        }
         let info = device.getChannelInfo(i);
-        channels.push(channelInfoGetState(info))
+
+        const self = info.getInfo()
+        const channel_name= device.getChannelName(i)
+        const coefficients = device.getChannelCoefficients(i, 255)
+        var chunks: any[] = [];
+        var chunk_lengths: any[] = []
+        for(let j = 0; j < self.chunk_count; j++){
+            const chunk = device.getChannelChunk(i, j, 255);
+            const slice = chunk.result.slice(0, chunk.length);
+            chunks.push([...slice])
+            chunk_lengths.push(slice.length)
+        } 
+        channels.push({
+            "_name_array": channel_name,
+            "name_length": channel_name.length,
+            "channel_type": self.channel_type,
+            "unit_type": self.unit_type,
+            "filler_bits": self.filler_bits,
+            "data_bits": self.data_bits,
+            "samples": self.samples,
+            "bits_per_sample": self.bits_per_sample,
+            "minimum": self.minimum,
+            "maximum": self.maximum,
+            "resolution": self.resolution,
+            "_coefficients_array": [...coefficients.result.slice(0, coefficients.length)],
+            "coefficients_length": coefficients.length,
+            "_chunk_list": [...chunks],
+            "_chunk_length_array": chunk_lengths,
+            "chunk_count": self.chunk_count
+        }
+        )
     }
 
     var ctrl_vars: any[] = [];
     var ctrl_var_count = device.getCtrlVarCount();
+
 
     for (let i = 0; i < ctrl_var_count; i++) {
         const ctrl_var = device.getCtrlVar(i);
@@ -814,11 +832,11 @@ export function deviceToString(
         led_settings.push(device.getLEDValue(i))
     }
 
-    const rgb_settings: Uint8Array[] = [];
+    const rgb_settings:number[][] = [];
     const rgb_count = device.getRGBCount();
 
     for (let i = 0; i < rgb_count; i++) {
-        rgb_settings.push(device.getRGBValues(i))
+        rgb_settings.push([...device.getRGBValues(i)])
     }
 
     const setting_category_count = device.getSettingCategoryCount();
@@ -831,32 +849,34 @@ export function deviceToString(
         setting_categories.push(category)
     }
 
+
     const setting_count = device.getSettingCount();
     var settings: string[] = []
     for (let i = 0; i < setting_count; i++) {
         const setting_info = device.getSettingInfo(i);
         const setting_name = getSettingTypeName(setting_info.setting_type);
-
-        var set = `<AsphodelSettingInfo {name=b'${setting_info.name}', name_length=${setting_info.name.length}, `
+        const thi_name = device.getSettingName(i);
+        var set = `<AsphodelSettingInfo {name=b'${thi_name}', name_length=${thi_name.length}, `
         set += "default_bytes="
-
-        for (let idx = 0; idx < setting_info.default_bytes.length; idx++) {
-            set += setting_info.default_bytes[idx].toString(16)
-            if (idx != setting_info.default_bytes.length - 1) {
-                set += ", "
+        const sd = device.getSettingDefault(i, 255)
+        const sd_slice = sd.result.slice(0,sd.length);
+        for (let idx = 0; idx < sd_slice.length; idx++) {
+            set += "0x"+sd_slice[idx].toString(16)
+            if (idx != sd_slice.length - 1) {
+                set += ","
             }
         }
 
-        set += `default_bytes_length=${setting_info.default_bytes.length}, setting_type=${setting_info.setting_type} (${setting_name}), `
+        set += `, default_bytes_length=${sd_slice.length}, setting_type=${setting_info.setting_type} (${setting_name}), `
 
-        var u = "u=<" + setting_info.u.repr_name + " {";
+        var u = "u=<" + setting_info.repr_name + " {";
         const keys = Object.keys(setting_info.u)
 
         for (let idx = 0; idx < keys.length; idx++) {
             const key = keys[idx]
             u += key
             u += "="
-            u += setting_info[keys[idx]].toString()
+            u += setting_info.u[keys[idx]].toString()
             if (idx != keys.length - 1) {
                 u += ", "
             }
@@ -887,7 +907,7 @@ export function deviceToString(
         const stream = device.getStream(i)
         const self = stream.getInfo()
         streams.push({
-            _channel_array: self.channel_index_list.slice(0, self.channel_count),
+            _channel_array: [...self.channel_index_list.slice(0, self.channel_count)],
             channel_count: self.channel_count,
             filler_bits: self.filler_bits,
             counter_bits: self.counter_bits,
@@ -900,7 +920,7 @@ export function deviceToString(
     const supply_count = device.getSupplyCount();
     var supplies: any[] = []
     var supply_results: any[] = []
-    for(let i = 0; i<supply_count;i++) {
+    for (let i = 0; i < supply_count; i++) {
         const supply_name = device.getSupplyName(i);
         const supply_info = device.getSupplyInfo(i);
         supplies.push([
@@ -913,24 +933,68 @@ export function deviceToString(
                 supply_info.offset
             ]
         ])
-        const supply_result = device.checkSupply(i, 20);
-        supply_results.push([supply_result.measurement, supply_result.result])
+        var supply_result: any = null;
+        try {
+            supply_result = device.checkSupply(i, 20);
+        } catch (e) { }
+        supply_results.push(supply_result == null ? null : [supply_result.measurement, supply_result.result])
     }
 
-    const radio_ctrl_vars = device.getRadioCtrlVars(256);
+    const radio_ctrl_vars = device.getRadioCtrlVars(255);
+    var rf_ctrl_vars:any = null;
+    try{
+       var rf_ctrl = device.getRfPowerCtlVars(255)
+       rf_ctrl_vars = [...rf_ctrl.result.slice(0,rf_ctrl.length)]
+    }catch(e){}
 
-    var supports_device_mode  = true;
+    var supports_device_mode = true;
     var device_mode: any = null;
     try {
         device_mode = device.getDeviceMode()
-    }catch(e) {
+    } catch (e) {
         supports_device_mode = false;
     }
 
-    var rf_power_status:any = null;
+    var rf_power_status: any = null;
     try {
         rf_power_status = device.getRfPowerStatus()
+    } catch (e) { }
+
+    var nvm_hash: any = null;
+    try {
+        nvm_hash = device.getNVMHash()
+    } catch (e) { }
+
+    var nvm_modified: any = null;
+    try {
+        nvm_modified = device.getNVMModified()
+    } catch (e) { }
+
+    var setting_hash: any = null;
+    try {
+        setting_hash = device.getSettingHash()
+    } catch (e) {}
+
+    var commit_id: any = null;
+    try {
+        commit_id = device.getCommitID();
+    } catch (e) {}
+
+    var repo_branch: any = null
+    try {
+        repo_branch = device.getRepoBranch()
     }catch(e){}
+
+    var repo_name: any = null;
+    try{
+        repo_name = device.getRepoName()
+    }catch(e){}
+
+    var nvm = device.readNVMSection(0, nvm_size);
+    var nvm_str = "";
+    nvm.forEach((byte)=>{
+        nvm_str += byte.toString(16)
+    })
 
     return JSON.stringify({
         board_info: [
@@ -941,14 +1005,14 @@ export function deviceToString(
         build_info: device.getBuildInfo(),
         library_build_date: getLibraryBuildDate(),
         library_build_info: getLibraryBuildInfo(),
-        library_protocol_version: getLibraryProtocalVersion(),
+        library_protocol_version: getLibraryProtocalVersionString(),
         location_string: device.getLocationString(),
         max_incoming_param_length: device.getMaxIncomingParamLength(),
         max_outgoing_param_length: device.getMaxOutgoingParamLength(),
-        nvm_hash: device.getNVMHash(),
-        nvm_modified: device.getNVMModified(),
+        nvm_hash: nvm_hash,
+        nvm_modified: nvm_modified,
         serial_number: device.getSerialNumber(),
-        setting_hash: device.getSettingHash(),
+        setting_hash: setting_hash,
         stream_packet_length: device.getStreamPacketLength(),
         supports_bootloader: device.supportsBootloaderCommands(),
         supports_radio: device.supportsRadioCommands(),
@@ -961,19 +1025,19 @@ export function deviceToString(
         ],
         user_tag_1: device.readUserTagString(tag_locations[0], tag_locations[1]),
         user_tag_2: device.readUserTagString(tag_locations[2], tag_locations[3]),
-        nvm: device.readNVMSection(0, nvm_size),
+        nvm: nvm_str,
         channel_calibration: calibrations,
         channels: channels,
         chip_family: device.getChipFamily(),
         chip_id: device.getChipID(),
         chip_model: device.getChipModel(),
-        commit_id: device.getCommitID(),
+        commit_id:commit_id,
         ctrl_vars: ctrl_vars,
         custom_enums: custom_enums,
         led_settings: led_settings,
         protocol_version: device.getProtocalVersionString(),
-        repo_branch: device.getRepoBranch(),
-        repo_name: device.getRepoName(),
+        repo_branch: repo_branch,
+        repo_name: repo_name,
         rgb_settings: rgb_settings,
         setting_categories: setting_categories,
         settings: settings,
@@ -985,8 +1049,11 @@ export function deviceToString(
         supply_results: supply_results,
         supports_device_mode: supports_device_mode,
         device_mode: device_mode,
-        radio_ctrl_vars: radio_ctrl_vars.result.slice(0,radio_ctrl_vars.length),
+        radio_ctrl_vars: [...radio_ctrl_vars.result.slice(0, radio_ctrl_vars.length)],
+        radio_default_serial: device.getRadioDefaultSerial(),
+        radio_scan_power: true,
         rf_power_status: rf_power_status,
+        rf_power_ctrl_vars: rf_ctrl_vars,
         streams_to_activate: streams_to_activate,
         stream_counts: stream_counts,
         schedule_id: schedule_id

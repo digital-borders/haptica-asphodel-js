@@ -1,4 +1,4 @@
-import { ChannelDecoder, ChannelInfo, createDeviceDecoder, Device, DeviceDecoder, getStreamingCounts, StreamAndChannels, StreamInfo, TCPDeinit, TCPFindDevices, TCPInit, UnitFormatter, USBDeInit, USBFindDevices, USBInit } from "../haptica-asphodel-js";
+import { ChannelDecoder, ChannelInfo, createDeviceDecoder, Device, DeviceDecoder, deviceToString, getStreamingCounts, StreamAndChannels, StreamInfo, TCPDeinit, TCPFindDevices, TCPInit, UnitFormatter, USBDeInit, USBFindDevices, USBInit } from "../haptica-asphodel-js";
 
 function init() {
     USBInit()
@@ -232,11 +232,20 @@ function checkAllConnectedReceivers() {
     return USBFindDevices(50).concat(TCPFindDevices(50));
 }
 
+import * as fs from "fs"
 
 async function main() {
     init()
     const devices = checkAllConnectedReceivers()
 
+    devices[0].open()
+
+    const str = deviceToString(devices[0], [], [], "")
+
+    fs.writeFileSync("sample.json", str);
+
+    console.log(str)
+/*
     for(let i = 0;i < devices.length; i++) {
         let element = devices[i];
         element.open()
@@ -257,7 +266,7 @@ async function main() {
 
         element.close()
     }
-
+*/
     deinit()
 }
 

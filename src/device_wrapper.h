@@ -108,7 +108,7 @@ public:
                                              InstanceMethod("readNVMRaw", &DeviceWrapper::readNvmRaw),
                                              InstanceMethod("readNVMSection", &DeviceWrapper::readNvmSection),
                                              InstanceMethod("readUserTagString", &DeviceWrapper::readUserTagString),
-                                             InstanceMethod("getNVMModified", &DeviceWrapper::readUserTagString),
+                                             InstanceMethod("getNVMModified", &DeviceWrapper::getNVMModified),
                                              InstanceMethod("getNVMHash", &DeviceWrapper::getNVMHash),
                                              InstanceMethod("getSettingHash", &DeviceWrapper::getSettingHash),
                                              InstanceMethod("reset", &DeviceWrapper::reset),
@@ -739,28 +739,30 @@ public:
         switch (in.setting_type)
         {
         case SETTING_TYPE_BYTE:
-            ob2.Set("nvm_word", in.u.byte_setting.nvm_word);
+        case SETTING_TYPE_BOOLEAN:
+        case SETTING_TYPE_CHANNEL_TYPE:
+        case SETTING_TYPE_UNIT_TYPE:
             ob2.Set("nvm_word_byte", in.u.byte_setting.nvm_word_byte);
-            ob2.Set("repr_name", "AsphodelByteSetting");
+            ob2.Set("nvm_word", in.u.byte_setting.nvm_word);
+            ob.Set("repr_name", "AsphodelByteSetting");
             break;
         case SETTING_TYPE_BYTE_ARRAY:
             ob2.Set("length_nvm_word", in.u.byte_array_setting.length_nvm_word);
             ob2.Set("maximum_length", in.u.byte_array_setting.maximum_length);
             ob2.Set("length_nvm_word_byte", in.u.byte_array_setting.length_nvm_word_byte);
             ob2.Set("nvm_word", in.u.byte_array_setting.nvm_word);
-            ob2.Set("repr_name", "AsphodelByteArraySetting");
-
+            ob.Set("repr_name", "AsphodelByteArraySetting");
             break;
         case SETTING_TYPE_STRING:
             ob2.Set("maximum_length", in.u.string_setting.maximum_length);
             ob2.Set("nvm_word", in.u.string_setting.nvm_word);
-            ob2.Set("repr_name", "AsphodelStringSetting");
+            ob.Set("repr_name", "AsphodelStringSetting");
             break;
         case SETTING_TYPE_INT32:
             ob2.Set("maximum", in.u.int32_setting.maximum);
             ob2.Set("minimum", in.u.int32_setting.minimum);
             ob2.Set("nvm_word", in.u.int32_setting.nvm_word);
-            ob2.Set("repr_name", "AsphodelInt32Setting");
+            ob.Set("repr_name", "AsphodelInt32Setting");
             break;
         case SETTING_TYPE_INT32_SCALED:
             ob2.Set("maximum", in.u.int32_scaled_setting.maximum);
@@ -769,7 +771,7 @@ public:
             ob2.Set("offset", in.u.int32_scaled_setting.offset);
             ob2.Set("scale", in.u.int32_scaled_setting.scale);
             ob2.Set("unit_type", in.u.int32_scaled_setting.unit_type);
-            ob2.Set("repr_name", "AsphodelInt32ScaledSetting");
+            ob.Set("repr_name", "AsphodelInt32ScaledSetting");
             break;
         case SETTING_TYPE_FLOAT:
             ob2.Set("maximum", in.u.float_setting.maximum);
@@ -778,7 +780,7 @@ public:
             ob2.Set("offset", in.u.float_setting.offset);
             ob2.Set("scale", in.u.float_setting.scale);
             ob2.Set("unit_type", in.u.float_setting.unit_type);
-            ob2.Set("repr_name", "AsphodelFloatSetting");
+            ob.Set("repr_name", "AsphodelFloatSetting");
             break;
         case SETTING_TYPE_FLOAT_ARRAY:
             ob2.Set("length_nvm_word", in.u.float_array_setting.length_nvm_word);
@@ -790,16 +792,16 @@ public:
             ob2.Set("offset", in.u.float_array_setting.offset);
             ob2.Set("scale", in.u.float_array_setting.scale);
             ob2.Set("unit_type", in.u.float_array_setting.unit_type);
-            ob2.Set("repr_name", "AsphodelFloatSetting");
+            ob.Set("repr_name", "AsphodelFloatSetting");
             break;
         case SETTING_TYPE_CUSTOM_ENUM:
             ob2.Set("custom_enum_index", in.u.custom_enum_setting.custom_enum_index);
             ob2.Set("nvm_word", in.u.custom_enum_setting.nvm_word);
             ob2.Set("nvm_word_byte", in.u.custom_enum_setting.nvm_word_byte);
-            ob2.Set("repr_name", "AsphodelCustomEnumSetting");
+            ob.Set("repr_name", "AsphodelCustomEnumSetting");
             break;
         default:
-            ob2.Set("repr_name", "Unknown");
+            ob.Set("repr_name", "Unknown");
             break;
         }
         ob.Set("u", ob2);
@@ -1399,8 +1401,8 @@ public:
             Napi::Error::New(info.Env(), "Expects 2 arguments").ThrowAsJavaScriptException();
         }
         int index = info[0].As<Napi::Number>().Int32Value();
-        int available, chi, invert;
-        float scale, offset;
+        int available = 0, chi = 0, invert = 0;
+        float scale = 0, offset = 0;
         int result = asphodel_get_stream_rate_info_blocking(this->device, index, &available, &chi, &invert, &scale, &offset);
         if (result != 0)
         {
@@ -1409,7 +1411,7 @@ public:
 
         Napi::Object ob = Napi::Object::New(info.Env());
 
-        ob.Set("available", Napi::Boolean::From<int>(info.Env(), available));
+        ob.Set("available", available == 0? false:true);
         ob.Set("channel_index", chi);
         ob.Set("invert", invert);
         ob.Set("scale", scale);
@@ -2362,7 +2364,7 @@ public:
         {
             Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
         }
-        auto s = Napi::String::New(info.Env(), buffer, length);
+        auto s = Napi::String::New(info.Env(), buffer);
         delete[] buffer;
         return s;
     }
