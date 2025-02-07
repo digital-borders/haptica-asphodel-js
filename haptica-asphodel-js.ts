@@ -736,8 +736,16 @@ export const getLibraryProtocalVersionString: () => string = asp.getLibraryProto
 export const getLibraryBuildInfo: () => string = asp.getLibraryBuildInfo
 export const getLibraryBuildDate: () => string = asp.getLibraryBuildDate
 
-function channelInfoGetState(ci: ChannelInfo, device: Device) {
-
+function stringToHex(str: string) {
+    let hex = "";
+    for (let i = 0; i < str.length; i++) {
+        let chars = str.charCodeAt(i).toString(16);
+        if(chars.length == 1) {
+            chars = "0"+chars
+        }
+        hex += chars
+    }
+    return hex;
 }
 
 export function deviceToString(
@@ -755,24 +763,25 @@ export function deviceToString(
     for (let i = 0; i < channel_count; i++) {
         try {
             calibrations.push(device.getChannelCalibration(i).calibration)
-        } catch (e) { 
+        } catch (e) {
             calibrations.push(null)
         }
         let info = device.getChannelInfo(i);
 
         const self = info.getInfo()
-        const channel_name= device.getChannelName(i)
+        const channel_name = device.getChannelName(i)
         const coefficients = device.getChannelCoefficients(i, 255)
         var chunks: any[] = [];
         var chunk_lengths: any[] = []
-        for(let j = 0; j < self.chunk_count; j++){
+        for (let j = 0; j < self.chunk_count; j++) {
             const chunk = device.getChannelChunk(i, j, 255);
             const slice = chunk.result.slice(0, chunk.length);
             chunks.push([...slice])
             chunk_lengths.push(slice.length)
-        } 
+        }
+
         channels.push({
-            "_name_array": channel_name,
+            "_name_array": stringToHex(channel_name),
             "name_length": channel_name.length,
             "channel_type": self.channel_type,
             "unit_type": self.unit_type,
@@ -833,7 +842,7 @@ export function deviceToString(
         led_settings.push(device.getLEDValue(i))
     }
 
-    const rgb_settings:number[][] = [];
+    const rgb_settings: number[][] = [];
     const rgb_count = device.getRGBCount();
 
     for (let i = 0; i < rgb_count; i++) {
@@ -860,10 +869,11 @@ export function deviceToString(
         var set = `<AsphodelSettingInfo {name=b'${thi_name}', name_length=${thi_name.length}, `
         set += "default_bytes="
         const sd = device.getSettingDefault(i, 255)
-        const sd_slice = sd.result.slice(0,sd.length);
+        const sd_slice = sd.result.slice(0, sd.length);
         for (let idx = 0; idx < sd_slice.length; idx++) {
             var chars = sd_slice[idx].toString(16);
-            set += "0x"+(chars.length == 1)?"0"+chars:chars
+            set += "0x"
+            set += (chars.length == 1) ? "0" + chars : chars
             if (idx != sd_slice.length - 1) {
                 set += ","
             }
@@ -943,11 +953,11 @@ export function deviceToString(
     }
 
     const radio_ctrl_vars = device.getRadioCtrlVars(255);
-    var rf_ctrl_vars:any = null;
-    try{
-       var rf_ctrl = device.getRfPowerCtlVars(255)
-       rf_ctrl_vars = [...rf_ctrl.result.slice(0,rf_ctrl.length)]
-    }catch(e){}
+    var rf_ctrl_vars: any = null;
+    try {
+        var rf_ctrl = device.getRfPowerCtlVars(255)
+        rf_ctrl_vars = [...rf_ctrl.result.slice(0, rf_ctrl.length)]
+    } catch (e) { }
 
     var supports_device_mode = true;
     var device_mode: any = null;
@@ -975,32 +985,33 @@ export function deviceToString(
     var setting_hash: any = null;
     try {
         setting_hash = device.getSettingHash()
-    } catch (e) {}
+    } catch (e) { }
 
     var commit_id: any = null;
     try {
         commit_id = device.getCommitID();
-    } catch (e) {}
+    } catch (e) { }
 
     var repo_branch: any = null
     try {
         repo_branch = device.getRepoBranch()
-    }catch(e){}
+    } catch (e) { }
 
     var repo_name: any = null;
-    try{
+    try {
         repo_name = device.getRepoName()
-    }catch(e){}
-
-
-    if(nvm_size != 1024) throw "NVM size is not 1024"
+    } catch (e) { }
 
     var nvm = device.readNVMSection(0, nvm_size);
     var nvm_str = "";
-    nvm.forEach((byte)=>{
-        nvm_str += byte.toString(16)
+    nvm.forEach((byte) => {
+        let chars = byte.toString(16)
+        if(chars.length == 1) {
+            chars = "0"+chars;
+        }
+        nvm_str += chars
     })
-
+    
     return JSON.stringify({
         board_info: [
             board_info.info, board_info.rev
@@ -1036,7 +1047,7 @@ export function deviceToString(
         chip_family: device.getChipFamily(),
         chip_id: device.getChipID(),
         chip_model: device.getChipModel(),
-        commit_id:commit_id,
+        commit_id: commit_id,
         ctrl_vars: ctrl_vars,
         custom_enums: custom_enums,
         led_settings: led_settings,
@@ -1067,7 +1078,7 @@ export function deviceToString(
 
 
 
-export class ApdBuilder{
+export class ApdBuilder {
     buffers: Buffer[]
     constructor(
         device: Device,
@@ -1085,7 +1096,7 @@ export class ApdBuilder{
             stream_counts.timeout
         ], schedule_id)
 
-        const now = Date.now()/1000
+        const now = Date.now() / 1000
 
         let buffer = Buffer.alloc(12 + dev_str.length);
 
@@ -1097,12 +1108,12 @@ export class ApdBuilder{
     }
 
     public update(data: Uint8Array) {
-        var now = Date.now()/1000;
+        var now = Date.now() / 1000;
         let buffer = Buffer.alloc(12 + data.length);
         buffer.writeDoubleBE(now, 0);
         buffer.writeUint32BE(data.length, 8);
-        data.forEach((byte, i)=>{
-            buffer.writeUInt8(byte, 12+i)
+        data.forEach((byte, i) => {
+            buffer.writeUInt8(byte, 12 + i)
         })
         this.buffers.push(buffer)
     }
@@ -1113,7 +1124,7 @@ export class ApdBuilder{
         const compressor = lzma.createCompressor()
         compressor.pipe(stream)
 
-        this.buffers.forEach((buffer)=>{
+        this.buffers.forEach((buffer) => {
             compressor.write(buffer);
         })
 

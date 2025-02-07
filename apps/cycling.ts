@@ -240,17 +240,16 @@ async function main() {
 
     devices[0].open()
 
-    var apd = new ApdBuilder(devices[0], [], {
-        packet_count: 0,
-        transfer_count: 0,
-        timeout: 0
-    }, "schedule_id");
+    //var apd = new ApdBuilder(devices[0], [], {
+    //    packet_count: 0,
+    //    transfer_count: 0,
+    //    timeout: 0
+    //}, "schedule_id");
+    //apd.finalFile("sample.apd")
 
-    apd.finalFile("sample.apd")
+    const str = deviceToString(devices[0], [], [], "")
 
-    //const str = deviceToString(devices[0], [], [], "")
-
-    //fs.writeFileSync("sample.json", str);
+    fs.writeFileSync("sample.json", str);
 
     //console.log(str)
 /*
