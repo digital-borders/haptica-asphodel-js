@@ -1,4 +1,4 @@
-import { ChannelDecoder, ChannelInfo, createDeviceDecoder, Device, DeviceDecoder, deviceToString, getStreamingCounts, StreamAndChannels, StreamInfo, TCPDeinit, TCPFindDevices, TCPInit, UnitFormatter, USBDeInit, USBFindDevices, USBInit } from "../haptica-asphodel-js";
+import { ApdBuilder, ChannelDecoder, ChannelInfo, createDeviceDecoder, Device, DeviceDecoder, deviceToString, getStreamingCounts, StreamAndChannels, StreamInfo, TCPDeinit, TCPFindDevices, TCPInit, UnitFormatter, USBDeInit, USBFindDevices, USBInit } from "../haptica-asphodel-js";
 
 function init() {
     USBInit()
@@ -240,11 +240,19 @@ async function main() {
 
     devices[0].open()
 
-    const str = deviceToString(devices[0], [], [], "")
+    var apd = new ApdBuilder(devices[0], [], {
+        packet_count: 0,
+        transfer_count: 0,
+        timeout: 0
+    }, "schedule_id");
 
-    fs.writeFileSync("sample.json", str);
+    apd.finalFile("sample.apd")
 
-    console.log(str)
+    //const str = deviceToString(devices[0], [], [], "")
+
+    //fs.writeFileSync("sample.json", str);
+
+    //console.log(str)
 /*
     for(let i = 0;i < devices.length; i++) {
         let element = devices[i];

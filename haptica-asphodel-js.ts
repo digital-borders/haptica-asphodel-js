@@ -1088,7 +1088,7 @@ export class ApdBuilder{
         buffer.writeDoubleBE(now, 0);
         buffer.writeUint32BE(dev_str.length, 8);
         buffer.write(dev_str, 12, "utf-8");
-
+        this.buffers = []
         this.buffers.push(buffer)
     }
 
@@ -1107,9 +1107,12 @@ export class ApdBuilder{
         var stream = fs.createWriteStream(file_name);
 
         const compressor = lzma.createCompressor()
+        compressor.pipe(stream)
 
         this.buffers.forEach((buffer)=>{
-            stream.write(buffer);
+            compressor.write(buffer);
         })
+
+        compressor.end()
     }
 }
