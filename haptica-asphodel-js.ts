@@ -1,6 +1,7 @@
 const asp = require("./build/Release/haptica-asphodel-js.node")
 const lzma = require("lzma-native")
 import * as fs from "fs";
+import { WriteStream } from "fs";
 
 
 // Asphodel protocol version 2.3.3
@@ -952,7 +953,11 @@ export function deviceToString(
         supply_results.push(supply_result == null ? null : [supply_result.measurement, supply_result.result])
     }
 
-    const radio_ctrl_vars = device.getRadioCtrlVars(255);
+    var radio_ctrl_vars:any = null
+    try{
+        radio_ctrl_vars =  device.getRadioCtrlVars(255);
+    }catch(e){}
+
     var rf_ctrl_vars: any = null;
     try {
         var rf_ctrl = device.getRfPowerCtlVars(255)
@@ -1011,7 +1016,7 @@ export function deviceToString(
         }
         nvm_str += chars
     })
-    
+
     return JSON.stringify({
         board_info: [
             board_info.info, board_info.rev
@@ -1065,7 +1070,7 @@ export function deviceToString(
         supply_results: supply_results,
         supports_device_mode: supports_device_mode,
         device_mode: device_mode,
-        radio_ctrl_vars: [...radio_ctrl_vars.result.slice(0, radio_ctrl_vars.length)],
+        radio_ctrl_vars:radio_ctrl_vars == null?[]: [...radio_ctrl_vars.result.slice(0, radio_ctrl_vars.length)],
         radio_default_serial: device.getRadioDefaultSerial(),
         radio_scan_power: true,
         rf_power_status: rf_power_status,
@@ -1118,16 +1123,28 @@ export class ApdBuilder {
         this.buffers.push(buffer)
     }
 
+    writeBuffer(stream:WriteStream, index = 0) {
+        console.log("writing chunks...", index)
+        if(index == this.buffers.length){
+            stream.end();
+            return
+        }
+
+        if(stream.write(this.buffers[index]) == false){
+            stream.once("drain", ()=>{
+                this.writeBuffer(stream, index)
+            })
+            return
+        }
+
+        this.writeBuffer(stream, index+1)
+    }
+
     public finalFile(file_name: string) {
         var stream = fs.createWriteStream(file_name);
-
-        const compressor = lzma.createCompressor()
-        compressor.pipe(stream)
-
-        this.buffers.forEach((buffer) => {
-            compressor.write(buffer);
+        this.writeBuffer(stream);
+        stream.on("finish", ()=>{
+            console.log("all chunks have been written...")
         })
-
-        compressor.end()
     }
 }

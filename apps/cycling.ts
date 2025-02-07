@@ -228,6 +228,70 @@ function aquireData(device: Device, time: number) {
     return samples
 }
 
+function aquireDataSaving(device: Device, time: number) {
+
+
+    var samples = new DeviceData();
+    var device_info = createDeviceInfo(device, samples);
+    
+    var streams_to_activate:number[] = []
+    for(let i = 0; i < device_info.stream_count; i++) {
+        streams_to_activate.push(i)
+    }
+
+    let response_time = 0.100; // 100 milliseconds
+    let buffer_time = 0.500; // 500 milliseconds
+    let timeout = 1000; // 1000 milliseconds
+    let streaming_counts = getStreamingCounts(device_info.info_array, response_time, buffer_time, timeout)
+
+    let apd = new ApdBuilder(device, streams_to_activate, streaming_counts, "simple_sched")
+
+    console.log(`Enabling ${device_info.stream_count} streams from ${device_info.serial_number}`)
+
+    console.log("Transfer count: ", streaming_counts.transfer_count);
+
+    device.startStreamingPackets(streaming_counts.packet_count,
+        streaming_counts.transfer_count,
+        streaming_counts.timeout, (status, stream_data, packet_size, packet_count) => {
+            if (status == 0) {
+                apd.update(stream_data)
+                //for (let packet = 0; packet < packet_count; packet++) {
+                //    device_info.decoder.decode(stream_data.slice(packet * packet_size))
+                //}
+            } else {
+                console.log(`Bad status ${status} in streaming packet callback`);
+            }
+        });
+
+    for (let j = 0; j < device_info.stream_count; j++) {
+        device.enableStream(j, true);
+    }
+
+
+    //=================================
+
+    let begin = Date.now();
+
+    while(Date.now() - begin < time) {
+       try {
+           device.poll(1000)
+       } catch(e) {
+        console.error(e)
+       }
+    }
+
+
+    console.log(`Disabling ${device_info.stream_count} streams from ${device_info.serial_number}`)
+    for (let j = 0; j < device_info.stream_count; j++) {
+        device.enableStream(j, false);
+    }
+
+    device.stopStreamingPackets();
+    device.poll(10);
+
+    return apd
+}
+
 function checkAllConnectedReceivers() {
     return USBFindDevices(50).concat(TCPFindDevices(50));
 }
@@ -238,7 +302,7 @@ async function main() {
     init()
     const devices = checkAllConnectedReceivers()
 
-    devices[0].open()
+
 
     //var apd = new ApdBuilder(devices[0], [], {
     //    packet_count: 0,
@@ -247,33 +311,33 @@ async function main() {
     //}, "schedule_id");
     //apd.finalFile("sample.apd")
 
-    const str = deviceToString(devices[0], [], [], "")
+    //const str = deviceToString(devices[0], [], [], "")
 
-    fs.writeFileSync("sample.json", str);
+    //fs.writeFileSync("sample.json", str);
 
     //console.log(str)
-/*
-    for(let i = 0;i < devices.length; i++) {
+
+    for(let i = 1;i < 2; i++) {
         let element = devices[i];
         element.open()
         console.log(`device ${i} has serial: ${element.getSerialNumber()}`)
         let sensors = await checkSensorsConnected(element)
         console.log(`sensors found: ${sensors} length ${sensors.length}`)
 
-        console.log("sensor serail number: ", sensors[0].getSerialNumber())
 
         console.log("acquire dara.....")
 
-        let samples = aquireData(sensors[0], 1000);
+        let samples = aquireDataSaving(sensors[0], 1000);
 
-        console.log("-----------samples----------------")
-        console.log(samples)
-        console.log("-----------samples----------------")
-
+        //console.log("-----------samples----------------")
+        //console.log(samples)
+        //console.log("-----------samples----------------")
+        
+        samples.finalFile("samplez")
 
         element.close()
     }
-*/
+
     deinit()
 }
 
