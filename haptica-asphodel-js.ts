@@ -1059,3 +1059,53 @@ export function deviceToString(
         schedule_id: schedule_id
     })
 }
+
+import * as fs from "fs";
+
+export class ApdBuilder{
+    buffers: Buffer[]
+    constructor(
+        device: Device,
+        streams_to_activate: number[],
+        stream_counts: {
+            packet_count: number;
+            transfer_count: number;
+            timeout: number;
+        },
+        schedule_id: string
+    ) {
+        const dev_str = deviceToString(device, streams_to_activate, [
+            stream_counts.packet_count,
+            stream_counts.transfer_count,
+            stream_counts.timeout
+        ], schedule_id)
+
+        const now = Date.now()/1000
+
+        let buffer = Buffer.alloc(12 + dev_str.length);
+
+        buffer.writeDoubleBE(now, 0);
+        buffer.writeUint32BE(dev_str.length, 8);
+        buffer.write(dev_str, 12, "utf-8");
+
+        this.buffers.push(buffer)
+    }
+
+    public update(data: Uint8Array) {
+        var now = Date.now()/1000;
+        let buffer = Buffer.alloc(12 + data.length);
+        buffer.writeDoubleBE(now, 0);
+        buffer.writeUint32BE(data.length, 8);
+        data.forEach((byte, i)=>{
+            buffer.writeUInt8(byte, 12+i)
+        })
+        this.buffers.push(buffer)
+    }
+
+    public finalFile(file_name: string) {
+        var stream = fs.createWriteStream(file_name);
+        this.buffers.forEach((buffer)=>{
+            stream.write(buffer);
+        })
+    }
+}
