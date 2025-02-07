@@ -1144,7 +1144,15 @@ export class ApdBuilder {
         var stream = fs.createWriteStream(file_name);
         this.writeBuffer(stream);
         stream.on("finish", ()=>{
-            console.log("all chunks have been written...")
+            var inp = fs.createReadStream(file_name);
+            var out = fs.createWriteStream(file_name+".apd");
+            var comp = lzma.createCompressor();
+            inp.pipe(comp).pipe(out)
+
+            out.on("finish",()=>{
+                console.log("all chunks have been written...")
+                fs.unlink(file_name, ()=>{})
+            })
         })
     }
 }
