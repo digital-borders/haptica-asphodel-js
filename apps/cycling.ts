@@ -273,6 +273,7 @@ function aquireDataSaving(device: Device, time: number) {
     let begin = Date.now();
 
     while(Date.now() - begin < time) {
+        console.log("polling data...")
        try {
            device.poll(1000)
        } catch(e) {
@@ -283,26 +284,27 @@ function aquireDataSaving(device: Device, time: number) {
 
     console.log(`Disabling ${device_info.stream_count} streams from ${device_info.serial_number}`)
     for (let j = 0; j < device_info.stream_count; j++) {
+        console.log("   disable: ", j)
         device.enableStream(j, false);
     }
 
     device.stopStreamingPackets();
     device.poll(10);
-
+    console.log("=============== done aquiring data ================")
     return apd
 }
 
 function checkAllConnectedReceivers() {
-    return USBFindDevices(50).concat(TCPFindDevices(50));
+    return USBFindDevices().concat(TCPFindDevices());
 }
 
 import * as fs from "fs"
 
 async function main() {
-    init()
-    const devices = checkAllConnectedReceivers()
-
-
+    const devices = USBFindDevices()
+    //checkAllConnectedReceivers()
+    
+    
 
     //var apd = new ApdBuilder(devices[0], [], {
     //    packet_count: 0,
@@ -317,32 +319,46 @@ async function main() {
 
     //console.log(str)
 
-    for(let i = 1;i < 2; i++) {
+    for(let i = 0;i < 1; i++) {
         let element = devices[i];
         element.open()
-        console.log(`device ${i} has serial: ${element.getSerialNumber()}`)
-        let sensors = await checkSensorsConnected(element)
-        console.log(`sensors found: ${sensors} length ${sensors.length}`)
+        //console.log(`device ${i} has serial: ${element.getSerialNumber()}`)
+        //let sensors = await checkSensorsConnected(element)
+        //console.log(`sensors found: ${sensors} length ${sensors.length}`)
 
 
-        console.log("acquire dara.....")
+        console.log("acquire dara.....", element.getSerialNumber())
 
-        let samples = aquireDataSaving(sensors[0], 1000);
+        let samples = aquireDataSaving(element, 30000);
 
-        //console.log("-----------samples----------------")
+        console.log("-----------samples----------------")
         //console.log(samples)
-        //console.log("-----------samples----------------")
+        console.log("-----------samples----------------")
         
         samples.finalFile("samplez")
 
-        element.close()
+        //element.close()
     }
 
-    deinit()
 }
 
 
+init()
+//const usb_devices = USBFindDevices()
+//const tcp_devices = TCPFindDevices();
+//console.log(usb_devices)
+//console.log(tcp_devices)
+//
+//usb_devices.forEach((dev)=>{
+//    dev.close()
+//    //dev.free()
+//})
+//deinit()
 main().then(()=>{
     console.log("main returnrd")
+    deinit()
 })
-
+//
+//setInterval(() => {
+//    console.log("===================")
+//}, 1000);

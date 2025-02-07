@@ -133,7 +133,6 @@ public:
         {
             this->decode_callback.Reset();
         }
-        this->decoder->free_decoder(this->decoder);
     }
 };
 
@@ -256,7 +255,6 @@ public:
         {
             this->lost_packet_callback.Reset();
         }
-        this->decoder->free_decoder(this->decoder);
     }
 };
 

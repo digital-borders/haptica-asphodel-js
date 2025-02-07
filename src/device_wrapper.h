@@ -248,7 +248,7 @@ public:
                                              InstanceMethod("echoTransaction", &DeviceWrapper::echoTransaction),
                                              InstanceMethod("echoParams", &DeviceWrapper::echoParams),
                                              InstanceMethod("getUserTagLocations", &DeviceWrapper::getUserTagLocs),
-
+                                             InstanceMethod("free", &DeviceWrapper::Free),
                                          });
 
         return fun;
@@ -2659,9 +2659,17 @@ public:
         return Napi::Value();
     }
 
+    Napi::Value Free(const Napi::CallbackInfo &)
+    {
+        if(this->device) {
+            this->device->free_device(this->device);
+            this->device = nullptr;
+        }
+        return Napi::Value();
+    }
+
     ~DeviceWrapper()
     {
-        this->device->free_device(this->device);
     }
 
 private:

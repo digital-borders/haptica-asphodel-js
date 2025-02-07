@@ -5,6 +5,13 @@
 
 using namespace Napi;
 
+Napi::Reference<Napi::Array> usb_devices;
+bool usb_init = false;
+
+Napi::Reference<Napi::Array> tcp_devices;
+bool tcp_init = false;
+
+
 Napi::Value InitUSB(const Napi::CallbackInfo &info)
 {
     int result = asphodel_usb_init();
@@ -12,12 +19,55 @@ Napi::Value InitUSB(const Napi::CallbackInfo &info)
     {
         Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
     }
+
+
+     size_t n = 0;
+    result = asphodel_usb_find_devices(nullptr, &n);
+    if (result != 0)
+    {
+        Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+    }
+    //info[0].As<Napi::Number>().Uint32Value();
+
+    AsphodelDevice_t **devices = new AsphodelDevice_t *[n];
+    // to remove
+    // devices[0] = new AsphodelDevice_t();
+    result = asphodel_usb_find_devices(devices, &n);
+    // to remove
+    // n = 1;
+    if (result != 0)
+    {
+        Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
+    }
+
+    Napi::Array arr = Napi::Array::New(info.Env(), n);
+
+    for (size_t i = 0; i < n; i++)
+    {
+        Napi::Function dev_constr = DeviceWrapper::GetClass(info.Env());
+        Napi::Object obj = Napi::Object::New(info.Env());
+        obj.Set("dev", Napi::External<AsphodelDevice_t>::New(info.Env(), devices[i]));
+        arr[i] = dev_constr.New({obj});
+    }
+
+    usb_devices = Napi::Persistent<Napi::Array>(arr);
+    usb_init = true;
     return Napi::Value();
 }
 
 Napi::Value DeinitUSB(const Napi::CallbackInfo &info)
 {
-    asphodel_usb_deinit();
+    if(usb_init){
+        Napi::Array devs = usb_devices.Value();
+        for(size_t i = 0; i < devs.Length(); i++) {
+            DeviceWrapper *dev = Napi::ObjectWrap<DeviceWrapper>::Unwrap(devs.Get(i).As<Napi::Object>());
+            dev->Close(info);
+            dev->Free(info);
+        }
+        asphodel_usb_deinit();
+        usb_devices.Reset();
+    }
+    //printf("DEINIT USB SUCCESSS\n");
     return Napi::Value();
 }
 
@@ -44,35 +94,10 @@ Napi::Value USBGetBackendVersion(const Napi::CallbackInfo &info)
 
 Napi::Value USBFindDevices(const Napi::CallbackInfo &info)
 {
-    if (info.Length() != 1)
-    {
-        Napi::Error::New(info.Env(), "Expect one Argument").ThrowAsJavaScriptException();
+    if(!usb_init){
+        InitUSB(info);
     }
-
-    size_t n = info[0].As<Napi::Number>().Uint32Value();
-
-    AsphodelDevice_t **devices = new AsphodelDevice_t *[n];
-    // to remove
-    // devices[0] = new AsphodelDevice_t();
-    int result = asphodel_usb_find_devices(devices, &n);
-    // to remove
-    // n = 1;
-    if (result != 0)
-    {
-        Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
-    }
-
-    Napi::Array arr = Napi::Array::New(info.Env(), n);
-
-    for (size_t i = 0; i < n; i++)
-    {
-        Napi::Function dev_constr = DeviceWrapper::GetClass(info.Env());
-        Napi::Object obj = Napi::Object::New(info.Env());
-        obj.Set("dev", Napi::External<AsphodelDevice_t>::New(info.Env(), devices[i]));
-        arr[i] = dev_constr.New({obj});
-    }
-    delete[] devices;
-    return arr;
+    return usb_devices.Value();
 }
 
 Napi::Value USBDevicesSupported(const Napi::CallbackInfo &info)
@@ -146,37 +171,24 @@ Napi::Value InitTCP(const Napi::CallbackInfo &info)
     {
         Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
     }
-    return Napi::Value();
-}
 
-Napi::Value DeinitTCP(const Napi::CallbackInfo &info)
-{
-    asphodel_tcp_deinit();
-    return Napi::Value();
-}
-
-Napi::Value TCPDevicesSupported(const Napi::CallbackInfo &info)
-{
-    int result = asphodel_tcp_devices_supported();
-    return Napi::Boolean::From<bool>(info.Env(), result);
-}
-
-Napi::Value TCPFindDevices(const Napi::CallbackInfo &info)
-{
-
-    if (info.Length() != 1)
+    size_t n = 0;
+    result = asphodel_tcp_find_devices(nullptr, &n);
+    // to remove
+    // n = 1;
+    if (result != 0)
     {
-        Napi::Error::New(info.Env(), "Expect one Argument").ThrowAsJavaScriptException();
+        Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
     }
 
-    size_t n = info[0].As<Napi::Number>().Uint32Value();
+    //info[0].As<Napi::Number>().Uint32Value();
 
     // to remove
     // n = 1;
     AsphodelDevice_t **devices = new AsphodelDevice_t *[n];
     // to remove
     // devices[0] = new AsphodelDevice_t();
-    int result = asphodel_tcp_find_devices(devices, &n);
+    result = asphodel_tcp_find_devices(devices, &n);
     // to remove
     // n = 1;
     if (result != 0)
@@ -194,7 +206,41 @@ Napi::Value TCPFindDevices(const Napi::CallbackInfo &info)
         arr[i] = dev_constr.New({obj});
     }
     delete[] devices;
-    return arr;
+
+    tcp_devices = Napi::Persistent(arr);
+    tcp_init = true;
+
+    return Napi::Value();
+}
+
+Napi::Value DeinitTCP(const Napi::CallbackInfo &info)
+{
+    if(tcp_init){
+        Napi::Array devs = tcp_devices.Value();
+        for(size_t i = 0; i < devs.Length(); i++) {
+            DeviceWrapper *dev = Napi::ObjectWrap<DeviceWrapper>::Unwrap(devs.Get(i).As<Napi::Object>());
+            dev->Close(info);
+            dev->Free(info);
+        }
+        asphodel_tcp_deinit();
+        tcp_devices.Reset();
+    }
+    //printf("TCP DEINIT SUCCESS\n");
+    return Napi::Value();
+}
+
+Napi::Value TCPDevicesSupported(const Napi::CallbackInfo &info)
+{
+    int result = asphodel_tcp_devices_supported();
+    return Napi::Boolean::From<bool>(info.Env(), result);
+}
+
+Napi::Value TCPFindDevices(const Napi::CallbackInfo &info)
+{
+    if(!tcp_init){
+        InitTCP(info);
+    }
+    return tcp_devices.Value();
 }
 
 Napi::Value TCPFindDevicesFilter(const Napi::CallbackInfo &info)

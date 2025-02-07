@@ -566,9 +566,6 @@ export type Device = {
             scale: number
         }
     },
-
-
-
     bootloaderStartProgram: () => void,
     getBootloaderPageInfo: () => {
         page_info: Uint32Array,
@@ -687,7 +684,7 @@ export type Device = {
     echoRaw: (data: Uint8Array, reply_length: number) => Uint8Array,
     echoTransaction: (data: Uint8Array, reply_length: number) => Uint8Array,
     echoParams: (data: Uint8Array, reply_length: number) => Uint8Array,
-
+    free:()=>void
 }
 
 export const getErrorName: (err: number) => string = asp.getErrorName
@@ -701,7 +698,7 @@ export const getChannelTypeCount: () => number = asp.getChannelTypeCount
 export const USBInit: () => void = asp.USBInit
 export const USBDeInit: () => void = asp.USBDeInit
 export const USBPollDevices: (millis: number) => void = asp.USBPollDevices
-export const USBFindDevices: (length: number) => Device[] = asp.USBFindDevices
+export const USBFindDevices: () => Device[] = asp.USBFindDevices
 export const USBGetBackendVersion: () => string = asp.USBGetBackendVersion
 
 export enum TCPFilter {
@@ -717,7 +714,7 @@ export enum TCPFilter {
 export const TCPInit: () => void = asp.TCPInit
 export const TCPDevicesSupported: () => boolean = asp.TCPDevicesSupported
 export const TCPDeinit: () => void = asp.TCPDeInit
-export const TCPFindDevices: (length: number) => Device[] = asp.TCPFindDevices
+export const TCPFindDevices: () => Device[] = asp.TCPFindDevices
 export const TCPFindDevicesFilter: (filter: TCPFilter, length: number) => Device[] = asp.TCPFindDevicesFilter
 export const TCPPollDevices: (millis: number) => void = asp.TCPPollDevices
 export const TCPCreateDevice: (host: string, port: number, timeout: number, serial: string) => Device = asp.TCPCreateDevice
@@ -1132,6 +1129,7 @@ export class ApdBuilder {
 
         if(stream.write(this.buffers[index]) == false){
             stream.once("drain", ()=>{
+                console.log("drain..............................")
                 this.writeBuffer(stream, index)
             })
             return
@@ -1142,17 +1140,9 @@ export class ApdBuilder {
 
     public finalFile(file_name: string) {
         var stream = fs.createWriteStream(file_name);
-        this.writeBuffer(stream);
         stream.on("finish", ()=>{
-            var inp = fs.createReadStream(file_name);
-            var out = fs.createWriteStream(file_name+".apd");
-            var comp = lzma.createCompressor();
-            inp.pipe(comp).pipe(out)
-
-            out.on("finish",()=>{
-                console.log("all chunks have been written...")
-                fs.unlink(file_name, ()=>{})
-            })
+            console.log("all chunks have been written...")
         })
+        this.writeBuffer(stream);
     }
 }
