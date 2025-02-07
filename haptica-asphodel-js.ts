@@ -862,7 +862,8 @@ export function deviceToString(
         const sd = device.getSettingDefault(i, 255)
         const sd_slice = sd.result.slice(0,sd.length);
         for (let idx = 0; idx < sd_slice.length; idx++) {
-            set += "0x"+sd_slice[idx].toString(16)
+            var chars = sd_slice[idx].toString(16);
+            set += "0x"+(chars.length == 1)?"0"+chars:chars
             if (idx != sd_slice.length - 1) {
                 set += ","
             }
@@ -990,6 +991,9 @@ export function deviceToString(
     try{
         repo_name = device.getRepoName()
     }catch(e){}
+
+
+    if(nvm_size != 1024) throw "NVM size is not 1024"
 
     var nvm = device.readNVMSection(0, nvm_size);
     var nvm_str = "";
