@@ -1,5 +1,6 @@
 const asp = require("./build/Release/haptica-asphodel-js.node")
-
+const lzma = require("lzma-native")
+import * as fs from "fs";
 
 
 // Asphodel protocol version 2.3.3
@@ -1060,7 +1061,7 @@ export function deviceToString(
     })
 }
 
-import * as fs from "fs";
+
 
 export class ApdBuilder{
     buffers: Buffer[]
@@ -1104,6 +1105,9 @@ export class ApdBuilder{
 
     public finalFile(file_name: string) {
         var stream = fs.createWriteStream(file_name);
+
+        const compressor = lzma.createCompressor()
+
         this.buffers.forEach((buffer)=>{
             stream.write(buffer);
         })
