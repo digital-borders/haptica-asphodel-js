@@ -386,9 +386,22 @@ async function main() {
 }
 
 
+function main2(){
+    var devs = USBFindDevices();
+    var device = devs[0];
+
+    device.open();
+    var apd = aquireDataSaving(device, 10000, "sample");
+    apd.finalFile("../out.raw")
+    device.close();
+}
+
+
 init()
-main().then(() => {
-    console.log("main returnrd")
-    deinit()
-})
+main2();
+deinit()
+//main().then(() => {
+//    console.log("main returnrd")
+//    deinit()
+//})
 

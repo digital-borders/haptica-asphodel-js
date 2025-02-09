@@ -1149,9 +1149,9 @@ export class ApdBuilder {
 
             file.on("finish", ()=>{
                 console.log("apd file written successfully: ", file_name+".apd")
+                fs.unlink(file_name, ()=>{});
             })
 
-            fs.unlink(file_name, ()=>{});
         })
         this.writeBuffer(stream);
     }
