@@ -314,35 +314,40 @@ async function main() {
 
         //var error_interval = setInterval(() => {
         var sensors = await checkSensorsConnected(actual_device as Device, 1000);
-                //.then((sensors) => {
-                    var actual_sensor = sensors.find((sensor) => sensor.getSerialNumber() == config_device.sensor)
-                    if (actual_sensor == undefined) throw `sensor ${config_device.sensor} not connected to ${(actual_device as Device).getSerialNumber()}.`;
-                    //clearInterval(error_interval)
+        //.then((sensors) => {
+        var actual_sensor = sensors.find((sensor) => sensor.getSerialNumber() == config_device.sensor)
+        if (actual_sensor == undefined) throw `sensor ${config_device.sensor} not connected to ${(actual_device as Device).getSerialNumber()}.`;
+        //clearInterval(error_interval)
 
-                    config_device.operations.forEach((op)=>{
-                        switch(op.operation) {
-                            case "save":
-                                const params:  {
-                                    "path": string, // The path to save the data
-                                    "type": "raw"|"processed" // The type of the data: raw is the .apd file with the raw data from sensor at full speed
-                                  } = op.params;
+        config_device.operations.forEach((op) => {
+            switch (op.operation) {
+                case "save":
+                    const params: {
+                        "path": string, // The path to save the data
+                        "type": "raw" | "processed" // The type of the data: raw is the .apd file with the raw data from sensor at full speed
+                    } = op.params;
 
-                                if(params.type == "raw") {
-                                    var apd = aquireDataSaving(
-                                        actual_sensor as Device,
-                                        config_device.duration, "");
-                                    apd.finalFile(params.path);
-                                } else throw `processed output not implemented.`
-                                break
-                            default: throw `unhandled operation: ${op.operation}.`
-                        }
-                    })
-                //})
-                //.catch((e) => {
-                //        console.log(`Error ${e.toString()}: waiting for ${config_device.failure_delay} before retrying...`)
-                //        var bgin = Date.now();
-                //        while(Date.now() - bgin < config_device.failure_delay){};
-                //})
+                    if (params.type == "raw") {
+                        var apd = aquireDataSaving(
+                            actual_sensor as Device,
+                            config_device.duration, "");
+                        apd.finalFile(params.path);
+                    } else throw `processed output not implemented.`
+                    break
+                default: throw `unhandled operation: ${op.operation}.`
+            }
+        })
+
+        sensors.forEach((sensor) => {
+            sensor.close();
+            sensor.free();
+        })
+        //})
+        //.catch((e) => {
+        //        console.log(`Error ${e.toString()}: waiting for ${config_device.failure_delay} before retrying...`)
+        //        var bgin = Date.now();
+        //        while(Date.now() - bgin < config_device.failure_delay){};
+        //})
         //})
 
     }

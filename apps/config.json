@@ -1,5 +1,27 @@
 {
-    "serial_number": "",
-    "how_long": "",
-    "when":""
-}
+    "mqtt": {
+    },
+    "devices": [
+      {
+        "type": "asphodel",
+        "receiver": "WMRP4290",
+        "sensor": "WM5552",
+        "sensorChannel": 1,
+        "machine": "Compressor 2",
+        "duration": 5,
+        "failure_delay": 20,
+        "cron_start": "* * * * *",
+        "operations": [
+          {
+            "operation": "save", 
+            "params": {
+              "path": "data",
+              "type": "raw"
+            }
+          }
+        ],
+        "mqttTopic": "sensors/WM5552"
+      }
+    ]
+  }
+  
