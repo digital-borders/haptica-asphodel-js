@@ -270,7 +270,7 @@ function checkAllConnectedReceivers() {
 }
 
 
-const path_to_config = "";
+const path_to_config = "apps/config.json";
 
 type Config = {
     mqtt: {
@@ -303,6 +303,7 @@ import * as fs from "fs"
 
 async function main() {
     const devices = checkAllConnectedReceivers();
+    devices.forEach((dev)=>dev.open());
 
     var config_str: string = fs.readFileSync(path_to_config).toString();
     var config: Config = JSON.parse(config_str);
