@@ -46,24 +46,24 @@ function createChannelClosure(
 }
 
 function make2DArray(array: Float64Array, rows: number, columns: number, out: Float64Array[]) {
-    if(array.length != rows * columns) throw "length mismatch"
-    for(let i = 0; i < columns; i++) {
+    if (array.length != rows * columns) throw "length mismatch"
+    for (let i = 0; i < columns; i++) {
         let beg = i * rows;
-        out.push(array.slice(beg, beg+rows))
+        out.push(array.slice(beg, beg + rows))
     }
     return out
 }
 
 class DeviceData {
     serial_number: string
-    streams: {channel: number, values: Float64Array[]}[][]
+    streams: { channel: number, values: Float64Array[] }[][]
 
     constructor() {
         this.streams = []
     }
 }
 
-function createDeviceInfo(device: Device, out:DeviceData): DeviceInfo {
+function createDeviceInfo(device: Device, out: DeviceData | null): DeviceInfo {
     let stream_count = device.getStreamCount();
     let stream_infos: StreamAndChannels[] = [];
     for (let i = 0; i < stream_count.count; i++) {
@@ -71,7 +71,9 @@ function createDeviceInfo(device: Device, out:DeviceData): DeviceInfo {
         let channels: ChannelInfo[] = []
         let stream_info = stream.getInfo();
 
-        out.streams[i] = []
+        if (out) {
+            out.streams[i] = []
+        }
 
         if (stream_info.channel_count == 0) {
             throw new Error(`Error: stream ${i} has 0 channels`);
@@ -88,7 +90,7 @@ function createDeviceInfo(device: Device, out:DeviceData): DeviceInfo {
     let decoder = createDeviceDecoder(stream_infos, stream_count.filler_bits, stream_count.id_bits);
 
     let serial_number = device.getSerialNumber();
-    out.serial_number = serial_number;
+    if (out) out.serial_number = serial_number;
 
     decoder.setUnknownIDCallback((id) => {
         console.log(`Unknown stream id ${id} on ${serial_number}`)
@@ -98,33 +100,17 @@ function createDeviceInfo(device: Device, out:DeviceData): DeviceInfo {
 
 
     decs.forEach((dec, i) => {
-        //let stream_info = stream_infos[i].getStreamInfo();
-
         dec.setLostPacketCallback((current, last) => {
             console.log(`Lost ${current - last - 1} from ${serial_number} stream ${i} `)
         })
 
         dec.getDecoders().forEach((channel_decoder, j) => {
-            //let channel_info = stream_infos[i].getChannelInfos()[j];
-            //let channel_closure = createChannelClosure(serial_number, stream_info, channel_info, channel_decoder)
-            //channel_decoder.setConversionFactor(channel_closure.unit_formatter.getConversionScale(), channel_closure.unit_formatter.getConversionOffset())
-            channel_decoder.setDecodeCallback((counter, data, samples, subchannels) => {
+            if(out)channel_decoder.setDecodeCallback((counter, data, samples, subchannels) => {
                 let arr = []
                 make2DArray(data, samples, subchannels, arr);
                 out.streams[i].push({
                     channel: j, values: arr
                 });
-                //for (let sample = 0; sample < samples; sample++) {
-                //    if (channel_closure.counter_time_scale == 0) {
-                //        console.log("channel_closure.counter_time_scale == 0", counter);
-                //    } else {
-                //        let time = counter * channel_closure.counter_time_scale + sample * channel_closure.sample_time_scale;
-                //        console.log("channel_closure.counter_time_scale != 0", time)
-                //    }
-                //    for (let sub = 0; sub < subchannels; sub++) {
-                //        console.log(data[sample * subchannels + sub])
-                //    }
-                //}
             })
         })
     })
@@ -208,12 +194,12 @@ function aquireData(device: Device, time: number) {
 
     let begin = Date.now();
 
-    while(Date.now() - begin < time) {
-       try {
-           device.poll(1000)
-       } catch(e) {
-        console.error(e)
-       }
+    while (Date.now() - begin < time) {
+        try {
+            device.poll(1000)
+        } catch (e) {
+            console.error(e)
+        }
     }
 
 
@@ -228,14 +214,11 @@ function aquireData(device: Device, time: number) {
     return samples
 }
 
-function aquireDataSaving(device: Device, time: number) {
+function aquireDataSaving(device: Device, time: number, schedule_id: string) {
+    var device_info = createDeviceInfo(device, null);
 
-
-    var samples = new DeviceData();
-    var device_info = createDeviceInfo(device, samples);
-    
-    var streams_to_activate:number[] = []
-    for(let i = 0; i < device_info.stream_count; i++) {
+    var streams_to_activate: number[] = []
+    for (let i = 0; i < device_info.stream_count; i++) {
         streams_to_activate.push(i)
     }
 
@@ -244,7 +227,7 @@ function aquireDataSaving(device: Device, time: number) {
     let timeout = 1000; // 1000 milliseconds
     let streaming_counts = getStreamingCounts(device_info.info_array, response_time, buffer_time, timeout)
 
-    let apd = new ApdBuilder(device, streams_to_activate, streaming_counts, "simple_sched")
+    let apd = new ApdBuilder(device, streams_to_activate, streaming_counts, schedule_id)
 
     console.log(`Enabling ${device_info.stream_count} streams from ${device_info.serial_number}`)
 
@@ -252,12 +235,9 @@ function aquireDataSaving(device: Device, time: number) {
 
     device.startStreamingPackets(streaming_counts.packet_count,
         streaming_counts.transfer_count,
-        streaming_counts.timeout, (status, stream_data, packet_size, packet_count) => {
+        streaming_counts.timeout, (status, stream_data) => {
             if (status == 0) {
                 apd.update(stream_data)
-                //for (let packet = 0; packet < packet_count; packet++) {
-                //    device_info.decoder.decode(stream_data.slice(packet * packet_size))
-                //}
             } else {
                 console.log(`Bad status ${status} in streaming packet callback`);
             }
@@ -267,18 +247,15 @@ function aquireDataSaving(device: Device, time: number) {
         device.enableStream(j, true);
     }
 
-
-    //=================================
-
     let begin = Date.now();
 
-    while(Date.now() - begin < time) {
+    while (Date.now() - begin < time) {
         console.log("polling data...")
-       try {
-           device.poll(1000)
-       } catch(e) {
-        console.error(e)
-       }
+        try {
+            device.poll(1000)
+        } catch (e) {
+            //console.error(e)
+        }
     }
 
 
@@ -298,67 +275,24 @@ function checkAllConnectedReceivers() {
     return USBFindDevices().concat(TCPFindDevices());
 }
 
-import * as fs from "fs"
-
 async function main() {
     const devices = USBFindDevices()
-    //checkAllConnectedReceivers()
-    
-    
-
-    //var apd = new ApdBuilder(devices[0], [], {
-    //    packet_count: 0,
-    //    transfer_count: 0,
-    //    timeout: 0
-    //}, "schedule_id");
-    //apd.finalFile("sample.apd")
-
-    //const str = deviceToString(devices[0], [], [], "")
-
-    //fs.writeFileSync("sample.json", str);
-
-    //console.log(str)
-
-    for(let i = 0;i < 1; i++) {
+    for (let i = 0; i < 1; i++) {
         let element = devices[i];
         element.open()
-        //console.log(`device ${i} has serial: ${element.getSerialNumber()}`)
-        //let sensors = await checkSensorsConnected(element)
-        //console.log(`sensors found: ${sensors} length ${sensors.length}`)
+        console.log("acquire data from: ", element.getSerialNumber())
 
+        let samples = aquireDataSaving(element, 3000, "sample_sched");
 
-        console.log("acquire dara.....", element.getSerialNumber())
-
-        let samples = aquireDataSaving(element, 30000);
-
-        console.log("-----------samples----------------")
-        //console.log(samples)
-        console.log("-----------samples----------------")
-        
         samples.finalFile("samplez")
-
-        //element.close()
     }
 
 }
 
 
 init()
-//const usb_devices = USBFindDevices()
-//const tcp_devices = TCPFindDevices();
-//console.log(usb_devices)
-//console.log(tcp_devices)
-//
-//usb_devices.forEach((dev)=>{
-//    dev.close()
-//    //dev.free()
-//})
-//deinit()
-main().then(()=>{
+main().then(() => {
     console.log("main returnrd")
     deinit()
 })
-//
-//setInterval(() => {
-//    console.log("===================")
-//}, 1000);
+
