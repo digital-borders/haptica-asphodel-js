@@ -312,12 +312,12 @@ async function main() {
         if (!actual_device) throw `device ${config_device.receiver} not found.`;
         actual_device.open();
 
-        var error_interval = setInterval(() => {
-            checkSensorsConnected(actual_device as Device, 1000)
-                .then((sensors) => {
+        //var error_interval = setInterval(() => {
+        var sensors = await checkSensorsConnected(actual_device as Device, 1000);
+                //.then((sensors) => {
                     var actual_sensor = sensors.find((sensor) => sensor.getSerialNumber() == config_device.sensor)
                     if (actual_sensor == undefined) throw `sensor ${config_device.sensor} not connected to ${(actual_device as Device).getSerialNumber()}.`;
-                    clearInterval(error_interval)
+                    //clearInterval(error_interval)
 
                     config_device.operations.forEach((op)=>{
                         switch(op.operation) {
@@ -337,13 +337,13 @@ async function main() {
                             default: throw `unhandled operation: ${op.operation}.`
                         }
                     })
-                })
-                .catch((e) => {
-                        console.log(`Error ${e.toString()}: waiting for ${config_device.failure_delay} before retrying...`)
-                        var bgin = Date.now();
-                        while(Date.now() - bgin < config_device.failure_delay){};
-                })
-        })
+                //})
+                //.catch((e) => {
+                //        console.log(`Error ${e.toString()}: waiting for ${config_device.failure_delay} before retrying...`)
+                //        var bgin = Date.now();
+                //        while(Date.now() - bgin < config_device.failure_delay){};
+                //})
+        //})
 
     }
 }
