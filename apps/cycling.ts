@@ -208,6 +208,40 @@ function aquireData(device: Device, time: number) {
     return samples
 }
 
+function sleep(millis:number) {
+    var bgn = Date.now();
+    while(Date.now() - bgn < millis) {
+
+    }
+}
+
+function startStreams(device: Device, active_streams:number[]) {
+    var stream_ids = active_streams.sort()
+    stream_ids.forEach((id)=>{
+        device.warmUpStream(id, true)
+    })
+    var warm_up_time = 0;
+    stream_ids.forEach((id)=>{
+        var stream = device.getStream(id).getInfo()
+        if(stream.warm_up_delay > warm_up_time) {
+            warm_up_time = stream.warm_up_delay;
+        }
+    })
+
+    sleep(warm_up_time*1000);
+
+    stream_ids.forEach((id)=>{
+        device.enableStream(id, true);
+        device.warmUpStream(id, false)
+    })
+}
+
+function stopStreams(device:Device, active_streams:number[]) {
+    active_streams.forEach((id)=>{
+        device.enableStream(id, false);
+    })
+}
+
 function aquireDataSaving(device: Device, time: number, schedule_id: string) {
     var device_info = createDeviceInfo(device, null);
 
@@ -227,7 +261,8 @@ function aquireDataSaving(device: Device, time: number, schedule_id: string) {
 
     console.log("Transfer count: ", streaming_counts.transfer_count);
 
-    device.startStreamingPackets(streaming_counts.packet_count,
+    device.startStreamingPackets(
+        streaming_counts.packet_count,
         streaming_counts.transfer_count,
         streaming_counts.timeout, (status, stream_data) => {
             if (status == 0) {
@@ -235,29 +270,25 @@ function aquireDataSaving(device: Device, time: number, schedule_id: string) {
             } else {
                 console.log(`Bad status ${status} in streaming packet callback`);
             }
-        });
+    });
 
-    for (let j = 0; j < device_info.stream_count; j++) {
-        device.enableStream(j, true);
-    }
+
+    startStreams(device, streams_to_activate);
 
     let begin = Date.now();
-
     while (Date.now() - begin < time) {
         console.log("polling data...")
         try {
             device.poll(1000)
         } catch (e) {
-            //console.error(e)
+            console.error(e)
         }
     }
 
 
     console.log(`Disabling ${device_info.stream_count} streams from ${device_info.serial_number}`)
-    for (let j = 0; j < device_info.stream_count; j++) {
-        console.log("   disable: ", j)
-        device.enableStream(j, false);
-    }
+
+    stopStreams(device, streams_to_activate)
 
     device.stopStreamingPackets();
     device.poll(10);
