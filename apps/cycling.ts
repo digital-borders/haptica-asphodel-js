@@ -105,7 +105,7 @@ function createDeviceInfo(device: Device, out: DeviceData | null): DeviceInfo {
         })
 
         dec.getDecoders().forEach((channel_decoder, j) => {
-            if(out)channel_decoder.setDecodeCallback((counter, data, samples, subchannels) => {
+            if (out) channel_decoder.setDecodeCallback((counter, data, samples, subchannels) => {
                 let arr = []
                 make2DArray(data, samples, subchannels, arr);
                 out.streams[i].push({
@@ -125,7 +125,7 @@ function createDeviceInfo(device: Device, out: DeviceData | null): DeviceInfo {
 }
 
 
-async function checkSensorsConnected(device: Device) {
+async function checkSensorsConnected(device: Device, timeout: number) {
     let remote_devices: Device[] = [];
     if (device.supportsRadioCommands()) {
         console.log("scanning fo remotes devices")
@@ -140,17 +140,11 @@ async function checkSensorsConnected(device: Device) {
                     let remote = device.getRemoteDevice()
                     remote.open()
                     device.connectRadio(serial)
-
-                    try {
-                        remote.waitForConnect(1000);
-                    } catch (e) {
-                        console.error(e);
-                        return
-                    }
+                    remote.waitForConnect(1000);
                     remote_devices.push(remote);
                 })
                 resolve(true)
-            }, 1000)
+            }, timeout)
         })
     }
     return remote_devices
@@ -275,18 +269,83 @@ function checkAllConnectedReceivers() {
     return USBFindDevices().concat(TCPFindDevices());
 }
 
+
+const path_to_config = "";
+
+type Config = {
+    mqtt: {
+        host: string, // The host of the mqtt broker
+        port: number, // The port of the mqtt broker
+        username: string, // The username of the mqtt broker
+        password: string, // The password of the mqtt broker
+        baseTopic: string // The base topic to publish the data to
+    },
+    devices: [
+        {
+            type: string, // The type of the device
+            receiver: string, // The id of the receiver the sensor is connected to
+            sensor: string, // The id of the sensor
+            sensorChannel: number, // The channel of the sensor
+            machine: string, // The id of the machine the sensor is attached to (physical location)
+            duration: number, // The duration of the acquisition in seconds
+            failure_delay: number, // The delay in seconds before retrying the acquisition in case of failure
+            cron_start: string, // The cron expression for the start of the acquisition
+            operations: [
+                // The operations to perform on the data
+                any
+            ],
+            mqttTopic: string // The mqtt topic to publish the data to
+        }
+    ]
+}
+
+import * as fs from "fs"
+
 async function main() {
-    const devices = USBFindDevices()
-    for (let i = 0; i < 1; i++) {
-        let element = devices[i];
-        element.open()
-        console.log("acquire data from: ", element.getSerialNumber())
+    const devices = checkAllConnectedReceivers();
 
-        let samples = aquireDataSaving(element, 3000, "sample_sched");
+    var config_str: string = fs.readFileSync(path_to_config).toString();
+    var config: Config = JSON.parse(config_str);
 
-        samples.finalFile("samplez")
+    for (let config_device of config.devices) {
+        var actual_device = devices.find((dev) => (dev.getSerialNumber() == config_device.receiver))
+        if (!actual_device) throw `device ${config_device.receiver} not found.`;
+        actual_device.open();
+
+        var error_interval = setInterval(() => {
+            checkSensorsConnected(actual_device as Device, 1000)
+                .then((sensors) => {
+                    var actual_sensor = sensors.find((sensor) => sensor.getSerialNumber() == config_device.sensor)
+                    if (actual_sensor == undefined) throw `sensor ${config_device.sensor} not connected to ${(actual_device as Device).getSerialNumber()}.`;
+                    clearInterval(error_interval)
+
+                    config_device.operations.forEach((op)=>{
+                        switch(op.operation) {
+                            case "save":
+                                const params:  {
+                                    "path": string, // The path to save the data
+                                    "type": "raw"|"processed" // The type of the data: raw is the .apd file with the raw data from sensor at full speed
+                                  } = op.params;
+
+                                if(params.type == "raw") {
+                                    var apd = aquireDataSaving(
+                                        actual_sensor as Device,
+                                        config_device.duration, "");
+                                    apd.finalFile(params.path);
+                                } else throw `processed output not implemented.`
+                                break
+                            default: throw `unhandled operation: ${op.operation}.`
+                        }
+                    })
+                })
+                .catch((e) => {
+                        console.log(`Error ${e.toString()}: waiting for ${config_device.failure_delay} before retrying...`)
+                        var bgin = Date.now();
+                        while(Date.now() - bgin < config_device.failure_delay){};
+                })
+        })
+
     }
-
 }
 
 
