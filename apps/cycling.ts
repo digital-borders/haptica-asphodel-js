@@ -101,18 +101,25 @@ function createDeviceInfo(device: Device, out: DeviceData | null): DeviceInfo {
 
     decs.forEach((dec, i) => {
         dec.setLostPacketCallback((current, last) => {
-            console.log(`Lost ${current - last - 1} from ${serial_number} stream ${i} `)
+            console.log(`${current} ${last}=================== Lost ${current - last - 1} packets from ${serial_number} stream ${i} ========================`)
         })
 
-        dec.getDecoders().forEach((channel_decoder, j) => {
-            if (out) channel_decoder.setDecodeCallback((counter, data, samples, subchannels) => {
-                let arr = []
-                make2DArray(data, samples, subchannels, arr);
-                out.streams[i].push({
-                    channel: j, values: arr
-                });
+        var channel_decoders = dec.getDecoders();
+        for(let channel_decoder of channel_decoders) {
+            channel_decoder.setDecodeCallback((counter, data, samples, subchannels)=>{
+                console.log(`counter: ${counter}, samples: ${samples}, subchannels: ${subchannels}`)
             })
-        })
+        }
+
+        //dec.getDecoders().forEach((channel_decoder, j) => {
+        //    if (out) channel_decoder.setDecodeCallback((counter, data, samples, subchannels) => {
+        //        let arr = []
+        //        make2DArray(data, samples, subchannels, arr);
+        //        out.streams[i].push({
+        //            channel: j, values: arr
+        //        });
+        //    })
+        //})
     })
 
     return {
@@ -163,6 +170,8 @@ function aquireData(device: Device, time: number) {
     let timeout = 1000; // 1000 milliseconds
     let streaming_counts = getStreamingCounts(device_info.info_array, response_time, buffer_time, timeout)
 
+    console.log(streaming_counts)
+
     console.log(`Enabling ${device_info.stream_count} streams from ${device_info.serial_number}`)
 
     console.log("Transfer count: ", streaming_counts.transfer_count);
@@ -172,8 +181,10 @@ function aquireData(device: Device, time: number) {
         streaming_counts.timeout, (status, stream_data, packet_size, packet_count) => {
             if (status == 0) {
                 for (let packet = 0; packet < packet_count; packet++) {
-                    device_info.decoder.decode(stream_data.slice(packet * packet_size))
+                    //device_info.decoder.decode(stream_data.slice(packet * packet_size))
                 }
+            } else if(status == -7){
+                console.log("==========TIMEOUT=======================")
             } else {
                 console.log(`Bad status ${status} in streaming packet callback`);
             }
@@ -208,36 +219,36 @@ function aquireData(device: Device, time: number) {
     return samples
 }
 
-function sleep(millis:number) {
+function sleep(millis: number) {
     var bgn = Date.now();
-    while(Date.now() - bgn < millis) {
+    while (Date.now() - bgn < millis) {
 
     }
 }
 
-function startStreams(device: Device, active_streams:number[]) {
+function startStreams(device: Device, active_streams: number[]) {
     var stream_ids = active_streams.sort()
-    stream_ids.forEach((id)=>{
+    stream_ids.forEach((id) => {
         device.warmUpStream(id, true)
     })
     var warm_up_time = 0;
-    stream_ids.forEach((id)=>{
+    stream_ids.forEach((id) => {
         var stream = device.getStream(id).getInfo()
-        if(stream.warm_up_delay > warm_up_time) {
+        if (stream.warm_up_delay > warm_up_time) {
             warm_up_time = stream.warm_up_delay;
         }
     })
 
-    sleep(warm_up_time*1000);
+    sleep(warm_up_time * 1000);
 
-    stream_ids.forEach((id)=>{
+    stream_ids.forEach((id) => {
         device.enableStream(id, true);
         device.warmUpStream(id, false)
     })
 }
 
-function stopStreams(device:Device, active_streams:number[]) {
-    active_streams.forEach((id)=>{
+function stopStreams(device: Device, active_streams: number[]) {
+    active_streams.forEach((id) => {
         device.enableStream(id, false);
     })
 }
@@ -264,22 +275,30 @@ function aquireDataSaving(device: Device, time: number, schedule_id: string) {
     device.startStreamingPackets(
         streaming_counts.packet_count,
         streaming_counts.transfer_count,
-        streaming_counts.timeout, (status, stream_data) => {
+        streaming_counts.timeout, (status, stream_data, packet_size, packet_count) => {
             if (status == 0) {
                 apd.update(stream_data)
+
+                //for (let packet = 0; packet < packet_count; packet++) {
+                //    device_info.decoder.decode(stream_data.slice(packet * packet_size))
+                //}
+                //console.log("stream len ", stream_data.length, "status", status, "packet size", packet_size, "packet count", packet_count);
+                //sleep(1000)
+            } else if(status == -7){
+                console.log("==========TIMEOUT=======================")
             } else {
                 console.log(`Bad status ${status} in streaming packet callback`);
             }
-    });
+        });
 
 
     startStreams(device, streams_to_activate);
 
     let begin = Date.now();
     while (Date.now() - begin < time) {
-        console.log("polling data...")
+        //console.log("polling data...")
         try {
-            device.poll(1000)
+            device.poll(100)
         } catch (e) {
             console.error(e)
         }
@@ -293,6 +312,21 @@ function aquireDataSaving(device: Device, time: number, schedule_id: string) {
     device.stopStreamingPackets();
     device.poll(10);
     console.log("=============== done aquiring data ================")
+
+
+    /// when i decode the packets from here no packets are lost
+    /// but when written to apd file insane number of packets are shown to be lost
+    /// thats very strange
+    apd.buffers.forEach((buffer, i)=>{
+        if(i == 0) return;
+        var sub = buffer.subarray(12);
+        console.log("buffer len: ", sub.length)
+        for(let i = 0; i < 12; i++) {
+            var start = i * 32;
+            device_info.decoder.decode(sub.subarray(start,start+32))
+        }
+    })
+
     return apd
 }
 
@@ -334,7 +368,7 @@ import * as fs from "fs"
 
 async function main() {
     const devices = checkAllConnectedReceivers();
-    devices.forEach((dev)=>dev.open());
+    devices.forEach((dev) => dev.open());
 
     var config_str: string = fs.readFileSync(path_to_config).toString();
     var config: Config = JSON.parse(config_str);
@@ -386,13 +420,13 @@ async function main() {
 }
 
 
-function main2(){
+function main2() {
     var devs = USBFindDevices();
     var device = devs[0];
 
     device.open();
-    var apd = aquireDataSaving(device, 10000, "sample");
-    apd.finalFile("../out.raw")
+    var apd = aquireDataSaving(device,10000, "sample");
+    //apd.finalFile("../out.raw")
     device.close();
 }
 
