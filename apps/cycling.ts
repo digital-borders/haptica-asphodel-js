@@ -105,10 +105,12 @@ function createDeviceInfo(device: Device, out: DeviceData | null): DeviceInfo {
         })
 
         var channel_decoders = dec.getDecoders();
+        let  ch = 0;
         for(let channel_decoder of channel_decoders) {
             channel_decoder.setDecodeCallback((counter, data, samples, subchannels)=>{
-                console.log(`counter: ${counter}, samples: ${samples}, subchannels: ${subchannels}`)
+                console.log(`[${ch}] counter: ${counter}, samples: ${samples}, subchannels: ${subchannels}`)
             })
+            ch++
         }
 
         //dec.getDecoders().forEach((channel_decoder, j) => {
@@ -134,6 +136,7 @@ function createDeviceInfo(device: Device, out: DeviceData | null): DeviceInfo {
 
 async function checkSensorsConnected(device: Device, timeout: number) {
     let remote_devices: Device[] = [];
+    console.log("Check sensor connected to ", device.getSerialNumber())
     if (device.supportsRadioCommands()) {
         console.log("scanning fo remotes devices")
         device.startRadioScan()
@@ -141,11 +144,13 @@ async function checkSensorsConnected(device: Device, timeout: number) {
             setTimeout(() => {
                 device.stopRadio()
                 let serials = device.getRadioScanResults(255)
-                let sorted = serials.sort();
-                console.log("Radio Scan results: ", sorted)
-                sorted.forEach((serial) => {
+                // sort will sort in place
+                serials.sort();
+                console.log("Radio Scan results: ", serials)
+                serials.forEach((serial) => {
                     let remote = device.getRemoteDevice()
                     remote.open()
+                    console.log("Remote serial number>",serial,remote.getSerialNumber())
                     device.connectRadio(serial)
                     remote.waitForConnect(1000);
                     remote_devices.push(remote);
@@ -254,21 +259,36 @@ function stopStreams(device: Device, active_streams: number[]) {
 }
 
 function aquireDataSaving(device: Device, time: number, schedule_id: string) {
+    console.log("acquire for: ", time)
     var device_info = createDeviceInfo(device, null);
 
     var streams_to_activate: number[] = []
     for (let i = 0; i < device_info.stream_count; i++) {
         streams_to_activate.push(i)
+        //break
     }
 
-    let response_time = 0.100; // 100 milliseconds
+    let response_time = 0.050; // 100 milliseconds
     let buffer_time = 0.500; // 500 milliseconds
     let timeout = 1000; // 1000 milliseconds
-    let streaming_counts = getStreamingCounts(device_info.info_array, response_time, buffer_time, timeout)
+    let streaming_counts = 
+    //{
+    //    packet_count:6,
+    //    transfer_count:11,
+    //    timeout: 1000
+    //}
+    getStreamingCounts(device_info.info_array, response_time, buffer_time, timeout)
 
     let apd = new ApdBuilder(device, streams_to_activate, streaming_counts, schedule_id)
 
-    console.log(`Enabling ${device_info.stream_count} streams from ${device_info.serial_number}`)
+    console.log(apd.buffers[0].data)
+
+    //return apd;
+
+    console.log("streaming counts: ", streaming_counts);
+
+    console.log("Total streams: ", device_info.stream_count);
+    console.log(`Enabling ${streams_to_activate.length} streams from ${device_info.serial_number}`)
 
     console.log("Transfer count: ", streaming_counts.transfer_count);
 
@@ -282,8 +302,9 @@ function aquireDataSaving(device: Device, time: number, schedule_id: string) {
                 //for (let packet = 0; packet < packet_count; packet++) {
                 //    device_info.decoder.decode(stream_data.slice(packet * packet_size))
                 //}
-                //console.log("stream len ", stream_data.length, "status", status, "packet size", packet_size, "packet count", packet_count);
+                //console.log("stream len ", stream_data.length, "ps*pc",packet_count*packet_size, "status", status, "packet size", packet_size, "packet count", packet_count);
                 //sleep(1000)
+                //console.log(stream_data.slice(0,10))
             } else if(status == -7){
                 console.log("==========TIMEOUT=======================")
             } else {
@@ -305,7 +326,7 @@ function aquireDataSaving(device: Device, time: number, schedule_id: string) {
     }
 
 
-    console.log(`Disabling ${device_info.stream_count} streams from ${device_info.serial_number}`)
+    console.log(`Disabling ${streams_to_activate.length} streams from ${device_info.serial_number}`)
 
     stopStreams(device, streams_to_activate)
 
@@ -317,15 +338,15 @@ function aquireDataSaving(device: Device, time: number, schedule_id: string) {
     /// when i decode the packets from here no packets are lost
     /// but when written to apd file insane number of packets are shown to be lost
     /// thats very strange
-    apd.buffers.forEach((buffer, i)=>{
-        if(i == 0) return;
-        var sub = buffer.subarray(12);
-        console.log("buffer len: ", sub.length)
-        for(let i = 0; i < 12; i++) {
-            var start = i * 32;
-            device_info.decoder.decode(sub.subarray(start,start+32))
-        }
-    })
+    //apd.buffers.forEach((buffer, i)=>{
+    //    if(i == 0) return;
+    //    var sub = buffer.subarray(12);
+    //    console.log("buffer len: ", sub.length)
+    //    for(let i = 0; i < 12; i++) {
+    //        var start = i * 32;
+    //        device_info.decoder.decode(sub.subarray(start,start+32))
+    //    }
+    //})
 
     return apd
 }
@@ -425,17 +446,17 @@ function main2() {
     var device = devs[0];
 
     device.open();
-    var apd = aquireDataSaving(device,10000, "sample");
-    //apd.finalFile("../out.raw")
+    var apd = aquireDataSaving(device,60000, "sample");
+    apd.finalFile("../out.raw")
     device.close();
 }
 
 
 init()
-main2();
-deinit()
-//main().then(() => {
-//    console.log("main returnrd")
-//    deinit()
-//})
+//main2();
+//deinit()
+main().then(() => {
+        console.log("main returnrd")
+    deinit()
+})
 

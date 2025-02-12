@@ -87,7 +87,7 @@ public:
                                          {
                                              InstanceMethod("close", &DeviceWrapper::Close),
                                              InstanceMethod("supportsRadioCommands", &DeviceWrapper::asphodelSupportsRadioCommands),
-                                             InstanceMethod("supportsRemoteCommands", &DeviceWrapper::asphodelSupportsRadioCommands),
+                                             InstanceMethod("supportsRemoteCommands", &DeviceWrapper::asphodelSupportsRemoteCommands),
                                              InstanceMethod("supportsBootloaderCommands", &DeviceWrapper::asphodelSupportsBootloaderCommands),
                                              InstanceMethod("supportsRFPowerCommands", &DeviceWrapper::asphodelSupportsRFCommands),
                                              InstanceMethod("getProtocalVersion", &DeviceWrapper::getProtocalV),

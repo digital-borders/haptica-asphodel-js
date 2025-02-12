@@ -684,7 +684,7 @@ export type Device = {
     echoRaw: (data: Uint8Array, reply_length: number) => Uint8Array,
     echoTransaction: (data: Uint8Array, reply_length: number) => Uint8Array,
     echoParams: (data: Uint8Array, reply_length: number) => Uint8Array,
-    free:()=>void
+    free: () => void
 }
 
 export const getErrorName: (err: number) => string = asp.getErrorName
@@ -738,8 +738,8 @@ function stringToHex(str: string) {
     let hex = "";
     for (let i = 0; i < str.length; i++) {
         let chars = str.charCodeAt(i).toString(16);
-        if(chars.length == 1) {
-            chars = "0"+chars
+        if (chars.length == 1) {
+            chars = "0" + chars
         }
         hex += chars
     }
@@ -950,10 +950,10 @@ export function deviceToString(
         supply_results.push(supply_result == null ? null : [supply_result.measurement, supply_result.result])
     }
 
-    var radio_ctrl_vars:any = null
-    try{
-        radio_ctrl_vars =  device.getRadioCtrlVars(255);
-    }catch(e){}
+    var radio_ctrl_vars: any = null
+    try {
+        radio_ctrl_vars = device.getRadioCtrlVars(255);
+    } catch (e) { }
 
     var rf_ctrl_vars: any = null;
     try {
@@ -1008,8 +1008,8 @@ export function deviceToString(
     var nvm_str = "";
     nvm.forEach((byte) => {
         let chars = byte.toString(16)
-        if(chars.length == 1) {
-            chars = "0"+chars;
+        if (chars.length == 1) {
+            chars = "0" + chars;
         }
         nvm_str += chars
     })
@@ -1067,7 +1067,7 @@ export function deviceToString(
         supply_results: supply_results,
         supports_device_mode: supports_device_mode,
         device_mode: device_mode,
-        radio_ctrl_vars:radio_ctrl_vars == null?[]: [...radio_ctrl_vars.result.slice(0, radio_ctrl_vars.length)],
+        radio_ctrl_vars: radio_ctrl_vars == null ? [] : [...radio_ctrl_vars.result.slice(0, radio_ctrl_vars.length)],
         radio_default_serial: device.getRadioDefaultSerial(),
         radio_scan_power: true,
         rf_power_status: rf_power_status,
@@ -1081,7 +1081,10 @@ export function deviceToString(
 
 
 export class ApdBuilder {
-    buffers: Buffer[]
+    buffers: {
+        data: Uint8Array | string,
+        timestamp: number
+    }[]
     constructor(
         device: Device,
         streams_to_activate: number[],
@@ -1100,56 +1103,63 @@ export class ApdBuilder {
 
         const now = Date.now() / 1000
 
-        let buffer = Buffer.alloc(12 + dev_str.length);
 
-        buffer.writeDoubleBE(now, 0);
-        buffer.writeUint32BE(dev_str.length, 8);
-        buffer.write(dev_str, 12, "utf-8");
         this.buffers = []
-        this.buffers.push(buffer)
+        this.buffers.push({
+            timestamp: now,
+            data: dev_str
+        })
     }
 
     public update(data: Uint8Array) {
         var now = Date.now() / 1000;
-        let buffer = Buffer.alloc(12 + data.length);
-        buffer.writeDoubleBE(now, 0);
-        buffer.writeUint32BE(data.length, 8);
-        data.forEach((byte, i) => {
-            buffer.writeUInt8(byte, 12 + i)
+        this.buffers.push({
+            timestamp: now,
+            data: data
         })
-        this.buffers.push(buffer)
     }
 
-    writeBuffer(stream:WriteStream, index = 0) {
+    writeBuffer(stream: WriteStream, index = 0) {
         console.log("writing chunks...", index)
-        if(index == this.buffers.length){
+        if (index == this.buffers.length) {
             stream.end();
             return
         }
 
-        if(stream.write(this.buffers[index]) == false){
-            stream.once("drain", ()=>{
+        let buffer = Buffer.alloc(12 + this.buffers[index].data.length);
+        buffer.writeDoubleBE(this.buffers[index].timestamp, 0);
+        buffer.writeUint32BE(this.buffers[index].data.length, 8);
+        if (index == 0) {
+            buffer.write(this.buffers[index].data as string, 12, "utf-8");
+        } else {
+            (this.buffers[index].data as Uint8Array).forEach((byte, i) => {
+                buffer.writeUint8(byte, 12 + i)
+            })
+        }
+
+        if (stream.write(buffer) == false) {
+            stream.once("drain", () => {
                 console.log("drain..............................")
-                this.writeBuffer(stream, index)
+                this.writeBuffer(stream, index + 1)
             })
             return
         }
 
-        this.writeBuffer(stream, index+1)
+        this.writeBuffer(stream, index + 1)
     }
 
     public finalFile(file_name: string) {
         var stream = fs.createWriteStream(file_name);
-        stream.on("finish", ()=>{
+        stream.on("finish", () => {
             console.log("all chunks have been written...")
             var compressor = lzma.createCompressor()
             var input = fs.createReadStream(file_name);
-            var file = fs.createWriteStream(file_name+".apd");
+            var file = fs.createWriteStream(file_name + ".apd");
             input.pipe(compressor).pipe(file);
 
-            file.on("finish", ()=>{
-                console.log("apd file written successfully: ", file_name+".apd")
-                fs.unlink(file_name, ()=>{});
+            file.on("finish", () => {
+                console.log("apd file written successfully: ", file_name + ".apd")
+                fs.unlink(file_name, () => { });
             })
 
         })
