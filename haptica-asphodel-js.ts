@@ -1139,7 +1139,6 @@ export class ApdBuilder {
 
         if (stream.write(buffer) == false) {
             stream.once("drain", () => {
-                console.log("drain..............................")
                 this.writeBuffer(stream, index + 1)
             })
             return

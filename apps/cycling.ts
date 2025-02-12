@@ -1,3 +1,4 @@
+import { channel } from "diagnostics_channel";
 import { ApdBuilder, ChannelDecoder, ChannelInfo, createDeviceDecoder, Device, DeviceDecoder, deviceToString, getStreamingCounts, StreamAndChannels, StreamInfo, TCPDeinit, TCPFindDevices, TCPInit, UnitFormatter, USBDeInit, USBFindDevices, USBInit } from "../haptica-asphodel-js";
 
 function init() {
@@ -55,11 +56,13 @@ function make2DArray(array: Float64Array, rows: number, columns: number, out: Fl
 }
 
 class DeviceData {
-    serial_number: string
-    streams: { channel: number, values: Float64Array[] }[][]
+    //serial_number: string
+    channel: number
+    streams: { counter: number, values: Float64Array }[][]
 
-    constructor() {
+    constructor(channel: number) {
         this.streams = []
+        this.channel = channel;
     }
 }
 
@@ -90,7 +93,7 @@ function createDeviceInfo(device: Device, out: DeviceData | null): DeviceInfo {
     let decoder = createDeviceDecoder(stream_infos, stream_count.filler_bits, stream_count.id_bits);
 
     let serial_number = device.getSerialNumber();
-    if (out) out.serial_number = serial_number;
+    //if (out) out.serial_number = serial_number;
 
     decoder.setUnknownIDCallback((id) => {
         console.log(`Unknown stream id ${id} on ${serial_number}`)
@@ -104,24 +107,29 @@ function createDeviceInfo(device: Device, out: DeviceData | null): DeviceInfo {
             console.log(`${current} ${last}=================== Lost ${current - last - 1} packets from ${serial_number} stream ${i} ========================`)
         })
 
-        var channel_decoders = dec.getDecoders();
-        let  ch = 0;
-        for(let channel_decoder of channel_decoders) {
-            channel_decoder.setDecodeCallback((counter, data, samples, subchannels)=>{
-                console.log(`[${ch}] counter: ${counter}, samples: ${samples}, subchannels: ${subchannels}`)
-            })
-            ch++
-        }
-
-        //dec.getDecoders().forEach((channel_decoder, j) => {
-        //    if (out) channel_decoder.setDecodeCallback((counter, data, samples, subchannels) => {
-        //        let arr = []
-        //        make2DArray(data, samples, subchannels, arr);
-        //        out.streams[i].push({
-        //            channel: j, values: arr
-        //        });
+        //var channel_decoders = dec.getDecoders();
+        //let  ch = 0;
+        //for(let channel_decoder of channel_decoders) {
+        //    channel_decoder.setDecodeCallback((counter, data, samples, subchannels)=>{
+        //        console.log(`[${ch}] counter: ${counter}, samples: ${samples}, subchannels: ${subchannels}`)
         //    })
-        //})
+        //    ch++
+        //}
+
+        dec.getDecoders().forEach((channel_decoder, j) => {
+            if(out == null) return;
+
+            if(j == out.channel) {
+                channel_decoder.setDecodeCallback((counter, data, samples, subchannels) => {
+                    //let arr = []
+                    //make2DArray(data, samples, subchannels, arr);
+                    out.streams[i].push({
+                        counter: counter,
+                        values: data
+                    });
+                })
+            }
+        })
     })
 
     return {
@@ -162,67 +170,6 @@ async function checkSensorsConnected(device: Device, timeout: number) {
     return remote_devices
 }
 
-
-function aquireData(device: Device, time: number) {
-
-
-    var samples = new DeviceData();
-    var device_info = createDeviceInfo(device, samples);
-
-
-    let response_time = 0.100; // 100 milliseconds
-    let buffer_time = 0.500; // 500 milliseconds
-    let timeout = 1000; // 1000 milliseconds
-    let streaming_counts = getStreamingCounts(device_info.info_array, response_time, buffer_time, timeout)
-
-    console.log(streaming_counts)
-
-    console.log(`Enabling ${device_info.stream_count} streams from ${device_info.serial_number}`)
-
-    console.log("Transfer count: ", streaming_counts.transfer_count);
-
-    device.startStreamingPackets(streaming_counts.packet_count,
-        streaming_counts.transfer_count,
-        streaming_counts.timeout, (status, stream_data, packet_size, packet_count) => {
-            if (status == 0) {
-                for (let packet = 0; packet < packet_count; packet++) {
-                    //device_info.decoder.decode(stream_data.slice(packet * packet_size))
-                }
-            } else if(status == -7){
-                console.log("==========TIMEOUT=======================")
-            } else {
-                console.log(`Bad status ${status} in streaming packet callback`);
-            }
-        });
-
-    for (let j = 0; j < device_info.stream_count; j++) {
-        device.enableStream(j, true);
-    }
-
-
-    //=================================
-
-    let begin = Date.now();
-
-    while (Date.now() - begin < time) {
-        try {
-            device.poll(1000)
-        } catch (e) {
-            console.error(e)
-        }
-    }
-
-
-    console.log(`Disabling ${device_info.stream_count} streams from ${device_info.serial_number}`)
-    for (let j = 0; j < device_info.stream_count; j++) {
-        device.enableStream(j, false);
-    }
-
-    device.stopStreamingPackets();
-    device.poll(10);
-
-    return samples
-}
 
 function sleep(millis: number) {
     var bgn = Date.now();
@@ -351,6 +298,70 @@ function aquireDataSaving(device: Device, time: number, schedule_id: string) {
     return apd
 }
 
+
+function aquireData(device: Device, time: number,channel:number) {
+
+
+    var out = new DeviceData(channel);
+    var device_info = createDeviceInfo(device, out);
+
+
+    let response_time = 0.0500; // 100 milliseconds
+    let buffer_time = 0.500; // 500 milliseconds
+    let timeout = 1000; // 1000 milliseconds
+    let streaming_counts = getStreamingCounts(device_info.info_array, response_time, buffer_time, timeout)
+
+    console.log(streaming_counts)
+
+    console.log(`Enabling ${device_info.stream_count} streams from ${device_info.serial_number}`)
+
+    console.log("Transfer count: ", streaming_counts.transfer_count);
+
+    device.startStreamingPackets(streaming_counts.packet_count,
+        streaming_counts.transfer_count,
+        streaming_counts.timeout, (status, stream_data, packet_size, packet_count) => {
+            if (status == 0) {
+                console.log("stream len ", stream_data.length, "ps*pc",packet_count*packet_size, "status", status, "packet size", packet_size, "packet count", packet_count);
+                for (let packet = 0; packet < packet_count; packet++) {
+                    device_info.decoder.decode(stream_data.slice(packet * packet_size))
+                }
+            } else if(status == -7){
+                console.log("==========TIMEOUT=======================")
+            } else {
+                console.log(`Bad status ${status} in streaming packet callback`);
+            }
+        });
+
+    for (let j = 0; j < device_info.stream_count; j++) {
+        device.enableStream(j, true);
+    }
+
+
+    //=================================
+
+    let begin = Date.now();
+
+    while (Date.now() - begin < time) {
+        try {
+            device.poll(1000)
+        } catch (e) {
+            console.error(e)
+        }
+    }
+
+
+    console.log(`Disabling ${device_info.stream_count} streams from ${device_info.serial_number}`)
+    for (let j = 0; j < device_info.stream_count; j++) {
+        device.enableStream(j, false);
+    }
+
+    device.stopStreamingPackets();
+    device.poll(10);
+
+    return out
+}
+
+
 function checkAllConnectedReceivers() {
     return USBFindDevices().concat(TCPFindDevices());
 }
@@ -441,6 +452,57 @@ async function main() {
 }
 
 
+function calculateMean(data:Float64Array) {
+    return data.reduce((prev, curr)=>prev+curr)/data.length;
+}
+
+function calculateVariance(data:Float64Array) {
+    var mean = calculateMean(data)
+    var sqdiff = data.map((value) => Math.pow(value-mean, 2))
+    return calculateMean(sqdiff);
+}
+
+function calculateStandardDeviation(data:Float64Array) {
+    return Math.sqrt(calculateVariance(data))
+}
+
+function calculateChannelMean(out:DeviceData){
+    var stream_means:any[] = []
+    out.streams.forEach((stream)=>{
+        var means:any[] = [];
+        stream.forEach((channel)=>{
+            means.push({counter: channel.counter, mean: calculateMean(channel.values)})
+        })
+        var channel_sum = 0;
+        means.forEach((mean)=>{
+            channel_sum += mean.mean;
+        })
+        stream_means.push(channel_sum/means.length);
+    })
+
+    return stream_means
+}
+
+function calculateChannelStandardDeviation(out:DeviceData){
+    var stream_stdds:any[] = []
+    out.streams.forEach((stream)=>{
+        var stdds:Float64Array = new Float64Array(stream.length);
+        stream.forEach((channel, i)=>{
+            if(i != 0) return
+            //means.push({counter: channel.counter, stdd: calculateStandardDeviation(channel.values)})
+            var stdd = calculateStandardDeviation(channel.values);
+            stdds[i] = stdd;
+        })
+        var channel_sum = 0;
+        stdds.forEach((stdd, i)=>{
+            channel_sum += stdds[i];
+        })
+        stream_stdds.push(channel_sum/stdds.length);
+    })
+
+    return stream_stdds
+}
+
 function main2() {
     var devs = USBFindDevices();
     var device = devs[0];
@@ -452,11 +514,26 @@ function main2() {
 }
 
 
+
+function main3() {
+    var devs = USBFindDevices();
+    var device = devs[0];
+
+    device.open();
+    var out = aquireData(device,1000, 0);
+
+    console.log(calculateChannelMean(out))
+    console.log(calculateChannelStandardDeviation(out))
+
+    device.close();
+}
+
+
 init()
-//main2();
-//deinit()
-main().then(() => {
-        console.log("main returnrd")
-    deinit()
-})
+main3();
+deinit()
+//main().then(() => {
+//        console.log("main returnrd")
+//    deinit()
+//})
 
