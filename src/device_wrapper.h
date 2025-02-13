@@ -1709,6 +1709,7 @@ public:
         }
         Napi::Uint32Array serials = info[0].As<Napi::Uint32Array>();
         Napi::Int8Array powers = Napi::Int8Array::New(info.Env(), serials.ElementLength());
+
         int result = asphodel_get_radio_scan_power_blocking(this->device, serials.Data(), powers.Data(), powers.ByteLength());
         if (result != 0)
         {
@@ -1740,6 +1741,8 @@ public:
             ob.Set("asphodel_type", arr[i].asphodel_type);
             ob.Set("device_mode", arr[i].device_mode);
             ob.Set("serial_number", arr[i].serial_number);
+
+            buf[i] = ob;
         }
 
         delete[] arr;
@@ -1754,7 +1757,9 @@ public:
         }
         size_t length = info[0].As<Napi::Number>().Int64Value();
         AsphodelExtraScanResult_t *arr = nullptr;
+        printf("=======> lenght: %lu\n", length);
         int result = asphodel_get_radio_extra_scan_results_blocking(this->device, &arr, &length);
+        printf("=======> lenght: %lu\n", length);
         if (result != 0)
         {
             Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();
@@ -1768,9 +1773,10 @@ public:
             ob.Set("asphodel_type", arr[i].asphodel_type);
             ob.Set("device_mode", arr[i].device_mode);
             ob.Set("serial_number", arr[i].serial_number);
+
+            buf[i] = ob;
         }
 
-        // memcpy(buf.Data(), arr, length * (sizeof(uint32_t)));
         asphodel_free_radio_extra_scan_results(arr);
         return buf;
     }

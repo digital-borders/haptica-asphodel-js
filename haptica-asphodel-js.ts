@@ -486,10 +486,10 @@ export type Device = {
     getRadioScanResults: (length: number) => Uint8Array,
     getRawRadioExtraScanResults: (length: number) => {
         asphodel_type: number, device_mode: number, serial_number: number
-    },
+    }[],
     getRadioExtraScanResults: (length: number) => {
         asphodel_type: number, device_mode: number, serial_number: number
-    },
+    }[],
     getRadioScanPower: (serials: Uint32Array) => Uint8Array,
     connectRadio: (serial: number) => void,
     getRadioStatus: () => {
@@ -1120,7 +1120,7 @@ export class ApdBuilder {
     }
 
     writeBuffer(stream: WriteStream, index = 0) {
-        console.log("writing chunks...", index)
+        //console.log("writing chunks...", index)
         if (index == this.buffers.length) {
             stream.end();
             return

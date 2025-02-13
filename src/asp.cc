@@ -66,6 +66,7 @@ Napi::Value DeinitUSB(const Napi::CallbackInfo &info)
         }
         asphodel_usb_deinit();
         usb_devices.Reset();
+        usb_init  = false;
     }
     //printf("DEINIT USB SUCCESSS\n");
     return Napi::Value();
@@ -224,6 +225,7 @@ Napi::Value DeinitTCP(const Napi::CallbackInfo &info)
         }
         asphodel_tcp_deinit();
         tcp_devices.Reset();
+        tcp_init = false;
     }
     //printf("TCP DEINIT SUCCESS\n");
     return Napi::Value();

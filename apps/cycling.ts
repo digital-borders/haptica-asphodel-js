@@ -1,15 +1,6 @@
 import { channel } from "diagnostics_channel";
-import { ApdBuilder, ChannelDecoder, ChannelInfo, createDeviceDecoder, Device, DeviceDecoder, deviceToString, getStreamingCounts, StreamAndChannels, StreamInfo, TCPDeinit, TCPFindDevices, TCPInit, UnitFormatter, USBDeInit, USBFindDevices, USBInit } from "../haptica-asphodel-js";
+import { ApdBuilder, ASPHODEL_PROTOCOL_TYPE_BOOTLOADER, ChannelDecoder, ChannelInfo, createDeviceDecoder, Device, DeviceDecoder, deviceToString, getStreamingCounts, StreamAndChannels, StreamInfo, TCPDeinit, TCPFindDevices, TCPInit, UnitFormatter, USBDeInit, USBFindDevices, USBInit } from "../haptica-asphodel-js";
 
-function init() {
-    USBInit()
-    TCPInit();
-}
-
-function deinit() {
-    USBDeInit()
-    TCPDeinit()
-}
 
 type ChannelClosure = {
     unit_formatter: UnitFormatter,
@@ -117,9 +108,9 @@ function createDeviceInfo(device: Device, out: DeviceData | null): DeviceInfo {
         //}
 
         dec.getDecoders().forEach((channel_decoder, j) => {
-            if(out == null) return;
+            if (out == null) return;
 
-            if(j == out.channel) {
+            if (j == out.channel) {
                 channel_decoder.setDecodeCallback((counter, data, samples, subchannels) => {
                     //let arr = []
                     //make2DArray(data, samples, subchannels, arr);
@@ -142,31 +133,123 @@ function createDeviceInfo(device: Device, out: DeviceData | null): DeviceInfo {
 }
 
 
-async function checkSensorsConnected(device: Device, timeout: number) {
-    let remote_devices: Device[] = [];
-    console.log("Check sensor connected to ", device.getSerialNumber())
-    if (device.supportsRadioCommands()) {
-        console.log("scanning fo remotes devices")
-        device.startRadioScan()
-        await new Promise((resolve) => {
-            setTimeout(() => {
-                device.stopRadio()
-                let serials = device.getRadioScanResults(255)
-                // sort will sort in place
-                serials.sort();
-                console.log("Radio Scan results: ", serials)
-                serials.forEach((serial) => {
-                    let remote = device.getRemoteDevice()
-                    remote.open()
-                    console.log("Remote serial number>",serial,remote.getSerialNumber())
-                    device.connectRadio(serial)
-                    remote.waitForConnect(1000);
-                    remote_devices.push(remote);
-                })
-                resolve(true)
-            }, timeout)
-        })
+function hasRadioScanPower(device: Device) {
+    try {
+        device.getRadioScanPower(new Uint32Array([0]))
+        return true;
+    } catch (e) {
+        return false;
     }
+}
+
+function collectScanResults(device: Device) {
+    var results = device.getRadioExtraScanResults(255)
+    console.log(results)
+
+    var scan_powers = new Map()
+    if (hasRadioScanPower(device)) {
+
+        var power_max_queries = Math.min(
+            Math.floor(device.getMaxOutgoingParamLength() / 4),
+            device.getMaxIncomingParamLength()
+        )
+        //console.log("device has radio scan power", power_max_queries)
+
+        for (let i = 0; i < results.length; i++) {
+            if (i == power_max_queries) break;
+            var result_subset = results.slice(i);
+            var serials: number[] = [];
+            result_subset.forEach((r) => serials.push(r.serial_number))
+            var powers = device.getRadioScanPower(new Uint32Array(serials))
+
+            for (let sn = 0; sn < serials.length; sn++) {
+                if (powers[sn] != 0x7f) {
+                    scan_powers.set(serials[sn], powers[sn])
+                }
+            }
+        }
+    }
+    console.log(scan_powers)
+
+    var scans: {
+        serial_number: number,
+        bootloader: boolean,
+        asphodel_type: number,
+        device_mode: number,
+        scan_strength: number,
+    }[] = []
+    results.forEach((r) => {
+        var power = scan_powers.get(r.serial_number)
+        scans.push({
+            serial_number: r.serial_number,
+            bootloader: (r.asphodel_type & ASPHODEL_PROTOCOL_TYPE_BOOTLOADER) != 0,
+            asphodel_type: r.asphodel_type,
+            device_mode: r.device_mode,
+            scan_strength: power
+        })
+    })
+
+    return scans
+}
+
+function doRadioScan(device: Device) {
+    console.log("scanning fo remotes devices")
+    device.startRadioScan()
+    sleep(1000);
+    //let serials = device.getRadioScanResults(255)
+    //return serials.sort();
+    var scans = collectScanResults(device)
+
+    console.log(scans)
+
+    var sensors: Device[] = []
+
+    scans.forEach((scan) => {
+        var remote = device.getRemoteDevice()
+        remote.open();
+        try {
+
+            if (!scan.bootloader) {
+                device.connectRadio(scan.serial_number)
+            } else {
+                device.connectRadioBoot(scan.serial_number)
+            }
+
+            remote.waitForConnect(1000)
+
+            if (remote.getSerialNumber() == "") {
+                console.log("No serial number when fetching device info");
+                throw new Error("No serial number when fetching device info")
+            }
+
+            sensors.push(remote)
+
+        } catch (e) {
+            remote.close()
+            remote.free();
+            sensors.forEach((sen) => {
+                sen.close();
+                sen.free();
+            })
+            throw e
+        }
+    })
+    return sensors
+}
+
+async function checkSensorsConnected(device: Device) {
+    let remote_devices: Device[] = [];
+    if (device.supportsRadioCommands()) {
+        while (true) {
+            try {
+                remote_devices = doRadioScan(device)
+                break
+            } catch (e) {
+
+            }
+        }
+    }
+
     return remote_devices
 }
 
@@ -205,7 +288,12 @@ function stopStreams(device: Device, active_streams: number[]) {
     })
 }
 
-function aquireDataSaving(device: Device, time: number, schedule_id: string) {
+async function aquireDataSaving(
+    device: Device,
+    time: number,
+    schedule_id: string,
+    job: Job
+) {
     console.log("acquire for: ", time)
     var device_info = createDeviceInfo(device, null);
 
@@ -218,17 +306,17 @@ function aquireDataSaving(device: Device, time: number, schedule_id: string) {
     let response_time = 0.050; // 100 milliseconds
     let buffer_time = 0.500; // 500 milliseconds
     let timeout = 1000; // 1000 milliseconds
-    let streaming_counts = 
-    //{
-    //    packet_count:6,
-    //    transfer_count:11,
-    //    timeout: 1000
-    //}
-    getStreamingCounts(device_info.info_array, response_time, buffer_time, timeout)
+    let streaming_counts =
+        //{
+        //    packet_count:6,
+        //    transfer_count:11,
+        //    timeout: 1000
+        //}
+        getStreamingCounts(device_info.info_array, response_time, buffer_time, timeout)
 
     let apd = new ApdBuilder(device, streams_to_activate, streaming_counts, schedule_id)
 
-    console.log(apd.buffers[0].data)
+    //console.log(apd.buffers[0].data)
 
     //return apd;
 
@@ -252,7 +340,7 @@ function aquireDataSaving(device: Device, time: number, schedule_id: string) {
                 //console.log("stream len ", stream_data.length, "ps*pc",packet_count*packet_size, "status", status, "packet size", packet_size, "packet count", packet_count);
                 //sleep(1000)
                 //console.log(stream_data.slice(0,10))
-            } else if(status == -7){
+            } else if (status == -7) {
                 console.log("==========TIMEOUT=======================")
             } else {
                 console.log(`Bad status ${status} in streaming packet callback`);
@@ -262,24 +350,38 @@ function aquireDataSaving(device: Device, time: number, schedule_id: string) {
 
     startStreams(device, streams_to_activate);
 
-    let begin = Date.now();
-    while (Date.now() - begin < time) {
-        //console.log("polling data...")
-        try {
-            device.poll(100)
-        } catch (e) {
-            console.error(e)
+
+    await new Promise((resolve) => {
+
+
+        let begin = Date.now();
+        var progress = 0;
+        function loop() {
+            //job.updateProgress(progress++);
+            if (Date.now() - begin < time) {
+                console.log("polling data...")
+                try {
+                    device.poll(100)
+                } catch (e) {
+                    console.error(e)
+                }
+
+                setImmediate(loop)
+                return;
+            }
+
+            console.log(`Disabling ${streams_to_activate.length} streams from ${device_info.serial_number}`)
+
+            stopStreams(device, streams_to_activate)
+
+            device.stopStreamingPackets();
+            device.poll(10);
+            console.log("=============== done aquiring data ================")
+            resolve(true)
         }
-    }
 
-
-    console.log(`Disabling ${streams_to_activate.length} streams from ${device_info.serial_number}`)
-
-    stopStreams(device, streams_to_activate)
-
-    device.stopStreamingPackets();
-    device.poll(10);
-    console.log("=============== done aquiring data ================")
+        loop()
+    })
 
 
     /// when i decode the packets from here no packets are lost
@@ -299,7 +401,7 @@ function aquireDataSaving(device: Device, time: number, schedule_id: string) {
 }
 
 
-function aquireData(device: Device, time: number,channel:number) {
+function aquireData(device: Device, time: number, channel: number) {
 
 
     var out = new DeviceData(channel);
@@ -321,11 +423,11 @@ function aquireData(device: Device, time: number,channel:number) {
         streaming_counts.transfer_count,
         streaming_counts.timeout, (status, stream_data, packet_size, packet_count) => {
             if (status == 0) {
-                console.log("stream len ", stream_data.length, "ps*pc",packet_count*packet_size, "status", status, "packet size", packet_size, "packet count", packet_count);
+                console.log("stream len ", stream_data.length, "ps*pc", packet_count * packet_size, "status", status, "packet size", packet_size, "packet count", packet_count);
                 for (let packet = 0; packet < packet_count; packet++) {
                     device_info.decoder.decode(stream_data.slice(packet * packet_size))
                 }
-            } else if(status == -7){
+            } else if (status == -7) {
                 console.log("==========TIMEOUT=======================")
             } else {
                 console.log(`Bad status ${status} in streaming packet callback`);
@@ -369,6 +471,22 @@ function checkAllConnectedReceivers() {
 
 const path_to_config = "apps/config.json";
 
+type DeviceConfig = {
+    type: string, // The type of the device
+    receiver: string, // The id of the receiver the sensor is connected to
+    sensor: string, // The id of the sensor
+    sensorChannel: number, // The channel of the sensor
+    machine: string, // The id of the machine the sensor is attached to (physical location)
+    duration: number, // The duration of the acquisition in seconds
+    failure_delay: number, // The delay in seconds before retrying the acquisition in case of failure
+    cron_start: string, // The cron expression for the start of the acquisition
+    operations: [
+        // The operations to perform on the data
+        any
+    ],
+    mqttTopic: string // The mqtt topic to publish the data to
+}
+
 type Config = {
     mqtt: {
         host: string, // The host of the mqtt broker
@@ -377,69 +495,125 @@ type Config = {
         password: string, // The password of the mqtt broker
         baseTopic: string // The base topic to publish the data to
     },
-    devices: [
-        {
-            type: string, // The type of the device
-            receiver: string, // The id of the receiver the sensor is connected to
-            sensor: string, // The id of the sensor
-            sensorChannel: number, // The channel of the sensor
-            machine: string, // The id of the machine the sensor is attached to (physical location)
-            duration: number, // The duration of the acquisition in seconds
-            failure_delay: number, // The delay in seconds before retrying the acquisition in case of failure
-            cron_start: string, // The cron expression for the start of the acquisition
-            operations: [
-                // The operations to perform on the data
-                any
-            ],
-            mqttTopic: string // The mqtt topic to publish the data to
-        }
-    ]
+    devices: DeviceConfig[]
 }
 
 import * as fs from "fs"
 
+function init() {
+    USBInit()
+    TCPInit();
+
+    //var devices = checkAllConnectedReceivers();
+    //devices.forEach((dev) => dev.open());
+}
+
+function deinit() {
+    USBDeInit()
+    TCPDeinit()
+}
+
+
+
+async function doWorkOnDevice(job: Job) {
+    init()
+
+    var config_device: DeviceConfig = job.data;
+
+    var devices = checkAllConnectedReceivers();
+    //if(true) return;
+    devices.forEach((d) => d.open())
+    var actual_device = devices.find((dev) => (dev.getSerialNumber() == config_device.receiver))
+    if (!actual_device) throw new Error(`device ${config_device.receiver} not found.`);
+    //actual_device.open();
+
+    //var error_interval = setInterval(() => {
+    var sensors = await checkSensorsConnected(actual_device as Device);
+
+    sensors.forEach((sensor) => {
+        console.log("found sensor: ", sensor.getSerialNumber())
+    })
+    //.then((sensors) => {
+    var actual_sensor = sensors.find((sensor) => sensor.getSerialNumber() == config_device.sensor)
+    if (actual_sensor == undefined) throw new Error(`sensor ${config_device.sensor} not connected to ${(actual_device as Device).getSerialNumber()}.`);
+    //clearInterval(error_interval)
+
+    for(var op of config_device.operations){
+        switch (op.operation) {
+            case "save":
+                const params: {
+                    "path": string, // The path to save the data
+                    "type": "raw" | "processed" // The type of the data: raw is the .apd file with the raw data from sensor at full speed
+                } = op.params;
+
+                if (params.type == "raw") {
+                    var apd = await aquireDataSaving(
+                        actual_sensor as Device,
+                        config_device.duration, "demo", job);
+                    apd.finalFile(params.path);
+                } else throw `processed output not implemented.`
+                break
+            default: throw `unhandled operation: ${op.operation}.`
+        }
+    }
+
+    sensors.forEach((sensor) => {
+        console.log("closing sensor: ", sensor.getSerialNumber())
+        sensor.close();
+        sensor.free();
+    })
+    deinit()
+}
+
+import { Job, Queue, Worker } from 'bullmq';
+import IORedis from 'ioredis';
+import { setInterval } from "timers/promises";
+
+function log(message: any) {
+    fs.appendFileSync("log.txt", `${message}`);
+}
+
 async function main() {
-    const devices = checkAllConnectedReceivers();
-    devices.forEach((dev) => dev.open());
+    const connection = new IORedis({ maxRetriesPerRequest: null });
+    const work_q = new Queue('aquire-data');
+
+    var worker = new Worker("aquire-data", async (job) => {
+        if (job) {
+            console.log(`worker working on ${job.name}`)
+            await doWorkOnDevice(job);
+            console.log(`worker finished working on ${job.name}`)
+        }
+    }, {
+        connection
+    })
+
+    worker.on("stalled", (jobId) => {
+        console.log(`[[[ job [id ${jobId}] failed ]]]`)
+
+    })
+
+    worker.on("completed", (job) => {
+        console.log(`[[[ job ${job.name} completed ]]]`)
+    })
+
+    worker.on("failed", (job) => {
+        if (job) {
+            console.log(`[[[ job ${job.name} failed return ${job.returnvalue}]]]`)
+        }
+    })
+
+
 
     var config_str: string = fs.readFileSync(path_to_config).toString();
     var config: Config = JSON.parse(config_str);
 
+
     for (let config_device of config.devices) {
-        var actual_device = devices.find((dev) => (dev.getSerialNumber() == config_device.receiver))
-        if (!actual_device) throw `device ${config_device.receiver} not found.`;
-        actual_device.open();
 
-        //var error_interval = setInterval(() => {
-        var sensors = await checkSensorsConnected(actual_device as Device, 1000);
-        //.then((sensors) => {
-        var actual_sensor = sensors.find((sensor) => sensor.getSerialNumber() == config_device.sensor)
-        if (actual_sensor == undefined) throw `sensor ${config_device.sensor} not connected to ${(actual_device as Device).getSerialNumber()}.`;
-        //clearInterval(error_interval)
+        await work_q.add(config_device.receiver + "-" + config_device.sensor, config_device, {})
 
-        config_device.operations.forEach((op) => {
-            switch (op.operation) {
-                case "save":
-                    const params: {
-                        "path": string, // The path to save the data
-                        "type": "raw" | "processed" // The type of the data: raw is the .apd file with the raw data from sensor at full speed
-                    } = op.params;
+        //await doWorkOnDevice(config_device)
 
-                    if (params.type == "raw") {
-                        var apd = aquireDataSaving(
-                            actual_sensor as Device,
-                            config_device.duration, "");
-                        apd.finalFile(params.path);
-                    } else throw `processed output not implemented.`
-                    break
-                default: throw `unhandled operation: ${op.operation}.`
-            }
-        })
-
-        sensors.forEach((sensor) => {
-            sensor.close();
-            sensor.free();
-        })
         //})
         //.catch((e) => {
         //        console.log(`Error ${e.toString()}: waiting for ${config_device.failure_delay} before retrying...`)
@@ -449,68 +623,108 @@ async function main() {
         //})
 
     }
+
+    //worker.run().catch(()=>{})
+
+
+    //setInterval(1000, async ()=>{
+    //    console.log("---tick---")
+    //    log("=========work status=====")
+    //    log("   =========completed========")
+    //    var completed = await work_q.getCompleted();
+    //    if(completed.length > 0) {
+    //        completed.forEach(element => {
+    //            log(element.name)
+    //        });
+    //    } else {
+    //        log("None");
+    //    }
+    //    log("   =========completed========")
+    //    log("   =========failed========")
+    //    var failed = await work_q.getFailed();
+    //    if(failed.length > 0) {
+    //        failed.forEach(element => {
+    //            log(element.name)
+    //        });
+    //    } else {
+    //        log("None");
+    //    }
+    //    log("   =========completed========")
+    //    log("   =========waiting========")
+    //    var waiting = await work_q.getWaiting();
+    //    if(waiting.length > 0) {
+    //        waiting.forEach(element => {
+    //            log(element.name)
+    //        });
+    //    } else {
+    //        log("None");
+    //    }
+    //    log("   =========waiting========")
+    //    log("=========work status=====")
+    //})
 }
 
 
-function calculateMean(data:Float64Array) {
-    return data.reduce((prev, curr)=>prev+curr)/data.length;
+
+
+function calculateMean(data: Float64Array) {
+    return data.reduce((prev, curr) => prev + curr) / data.length;
 }
 
-function calculateVariance(data:Float64Array) {
+function calculateVariance(data: Float64Array) {
     var mean = calculateMean(data)
-    var sqdiff = data.map((value) => Math.pow(value-mean, 2))
+    var sqdiff = data.map((value) => Math.pow(value - mean, 2))
     return calculateMean(sqdiff);
 }
 
-function calculateStandardDeviation(data:Float64Array) {
+function calculateStandardDeviation(data: Float64Array) {
     return Math.sqrt(calculateVariance(data))
 }
 
-function calculateChannelMean(out:DeviceData){
-    var stream_means:any[] = []
-    out.streams.forEach((stream)=>{
-        var means:any[] = [];
-        stream.forEach((channel)=>{
-            means.push({counter: channel.counter, mean: calculateMean(channel.values)})
+function calculateChannelMean(out: DeviceData) {
+    var stream_means: any[] = []
+    out.streams.forEach((stream) => {
+        var means: any[] = [];
+        stream.forEach((channel) => {
+            means.push({ counter: channel.counter, mean: calculateMean(channel.values) })
         })
         var channel_sum = 0;
-        means.forEach((mean)=>{
+        means.forEach((mean) => {
             channel_sum += mean.mean;
         })
-        stream_means.push(channel_sum/means.length);
+        stream_means.push(channel_sum / means.length);
     })
 
     return stream_means
 }
 
-function calculateChannelStandardDeviation(out:DeviceData){
-    var stream_stdds:any[] = []
-    out.streams.forEach((stream)=>{
-        var stdds:Float64Array = new Float64Array(stream.length);
-        stream.forEach((channel, i)=>{
-            if(i != 0) return
+function calculateChannelStandardDeviation(out: DeviceData) {
+    var stream_stdds: any[] = []
+    out.streams.forEach((stream) => {
+        var stdds: Float64Array = new Float64Array(stream.length);
+        stream.forEach((channel, i) => {
+            if (i != 0) return
             //means.push({counter: channel.counter, stdd: calculateStandardDeviation(channel.values)})
             var stdd = calculateStandardDeviation(channel.values);
             stdds[i] = stdd;
         })
         var channel_sum = 0;
-        stdds.forEach((stdd, i)=>{
+        stdds.forEach((stdd, i) => {
             channel_sum += stdds[i];
         })
-        stream_stdds.push(channel_sum/stdds.length);
+        stream_stdds.push(channel_sum / stdds.length);
     })
 
     return stream_stdds
 }
 
 function main2() {
-    var devs = USBFindDevices();
-    var device = devs[0];
-
-    device.open();
-    var apd = aquireDataSaving(device,60000, "sample");
-    apd.finalFile("../out.raw")
-    device.close();
+    //var devs = USBFindDevices();
+    //var device = devs[0];
+    //device.open();
+    //var apd = aquireDataSaving(device, 60000, "sample");
+    //apd.finalFile("../out.raw")
+    //device.close();
 }
 
 
@@ -520,7 +734,7 @@ function main3() {
     var device = devs[0];
 
     device.open();
-    var out = aquireData(device,1000, 0);
+    var out = aquireData(device, 1000, 0);
 
     console.log(calculateChannelMean(out))
     console.log(calculateChannelStandardDeviation(out))
@@ -529,11 +743,15 @@ function main3() {
 }
 
 
-init()
-main3();
-deinit()
+//init()
+//main3();
+//deinit()
 //main().then(() => {
 //        console.log("main returnrd")
 //    deinit()
 //})
 
+
+main().then(() => {
+    console.log("main exited...")
+})
