@@ -1,27 +1,25 @@
 {
-    "mqtt": {
-    },
-    "devices": [
-      {
-        "type": "asphodel",
-        "receiver": "WMRP4290",
-        "sensor": "WM5552",
-        "sensorChannel": 1,
-        "machine": "Compressor 2",
-        "duration": 60000,
-        "failure_delay": 20,
-        "cron_start": "* * * * *",
-        "operations": [
-          {
-            "operation": "save", 
-            "params": {
-              "path": "/home/melo/Desktop/haptica-asphodel-js/examples/data",
-              "type": "raw"
-            }
+  "mqtt": {},
+  "devices": [
+    {
+      "type": "asphodel",
+      "receiver": "WMRP4290",
+      "sensor": "WM5552",
+      "sensorChannel": 0,
+      "machine": "Compressor 2",
+      "duration": 1000,
+      "failure_delay": 20,
+      "cron_start": "* * * * *",
+      "operations": [
+        {
+          "operation": "mean",
+          "params": {
+            "path": "/home/melo/Desktop/haptica-asphodel-js/examples/data",
+            "type": "raw"
           }
-        ],
-        "mqttTopic": "sensors/WM5552"
-      }
-    ]
-  }
-  
+        }
+      ],
+      "mqttTopic": "sensors/WM5552"
+    }
+  ]
+}

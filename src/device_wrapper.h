@@ -1757,9 +1757,7 @@ public:
         }
         size_t length = info[0].As<Napi::Number>().Int64Value();
         AsphodelExtraScanResult_t *arr = nullptr;
-        printf("=======> lenght: %lu\n", length);
         int result = asphodel_get_radio_extra_scan_results_blocking(this->device, &arr, &length);
-        printf("=======> lenght: %lu\n", length);
         if (result != 0)
         {
             Napi::Error::New(info.Env(), asphodel_error_name(result)).ThrowAsJavaScriptException();

@@ -5,7 +5,7 @@ class ChannelDecoder : public Napi::ObjectWrap<ChannelDecoder>
 {
     AsphodelChannelDecoder_t *decoder;
     Napi::FunctionReference decode_callback;
-
+    bool stop = false;
 public:
     ChannelDecoder(const Napi::CallbackInfo &info) : Napi::ObjectWrap<ChannelDecoder>(info)
     {
@@ -16,12 +16,15 @@ public:
         AsphodelChannelDecoder_t *decoder = info[0].As<Napi::Object>().Get("decoder").As<Napi::External<AsphodelChannelDecoder_t>>().Data();
         this->decode_callback = Napi::FunctionReference();
         this->decoder = decoder;
+        decoder->callback = decodeCallback;
+        decoder->closure = this;
     }
 
     static Napi::Function getClass(Napi::Env env)
     {
         return DefineClass(env, "ChannelDecoder", {
                                                       InstanceMethod("decode", &ChannelDecoder::decode),
+                                                      InstanceMethod("stop", &ChannelDecoder::Stop),
                                                       InstanceMethod("setConversionFactor", &ChannelDecoder::setConversionFactor),
                                                       InstanceMethod("reset", &ChannelDecoder::reset),
                                                       InstanceMethod("getChannelBitOffset", &ChannelDecoder::getChannelBitOffset),
@@ -63,10 +66,17 @@ public:
         return Napi::Value();
     }
 
-        Napi::Value getChannelName(const Napi::CallbackInfo &info)
+    Napi::Value getChannelName(const Napi::CallbackInfo &info)
     {
         return Napi::String::New(info.Env(), this->decoder->channel_name);
     }
+
+    Napi::Value Stop(const Napi::CallbackInfo &info)
+    {
+        this->stop = true;
+        return Napi::Value();
+    }
+
 
     Napi::Value getChannelBitOffset(const Napi::CallbackInfo &info)
     {
@@ -116,14 +126,23 @@ public:
     static void decodeCallback(uint64_t counter, double *data, size_t samples, size_t subchannels, void *closure)
     {
         ChannelDecoder *dec = static_cast<ChannelDecoder *>(closure);
-        if (!dec->decode_callback.IsEmpty())
+        if (!dec->decode_callback.IsEmpty() && data != nullptr && !dec->stop)
         {
-            Napi::Float64Array f = Napi::Float64Array::New(dec->decode_callback.Env(), samples * subchannels);
-            memcpy(f.Data(), data, (samples * subchannels) * sizeof(double));
-            dec->decode_callback.Call({Napi::Number::From<uint64_t>(dec->decode_callback.Env(), counter),
-                                       f,
-                                       Napi::Number::From<size_t>(dec->decode_callback.Env(), samples),
-                                       Napi::Number::From<size_t>(dec->decode_callback.Env(), subchannels)});
+            if (dec->decode_callback.Env() == nullptr)
+                return;
+            try
+            {
+
+                Napi::Float64Array f = Napi::Float64Array::New(dec->decode_callback.Env(), samples * subchannels);
+                memcpy(f.Data(), data, (samples * subchannels) * sizeof(double));
+                dec->decode_callback.Call({Napi::Number::From<uint64_t>(dec->decode_callback.Env(), counter),
+                                            f,
+                                           Napi::Number::From<size_t>(dec->decode_callback.Env(), samples),
+                                           Napi::Number::From<size_t>(dec->decode_callback.Env(), subchannels)});
+            }
+            catch (std::exception &e)
+            {
+            }
         }
     }
 
@@ -151,6 +170,8 @@ public:
         AsphodelStreamDecoder_t *decoder = info[0].As<Napi::Object>().Get("decoder").As<Napi::External<AsphodelStreamDecoder_t>>().Data();
         this->lost_packet_callback = Napi::FunctionReference();
         this->decoder = decoder;
+        decoder->lost_packet_callback = StreamDecoder::lostPacketCallback;
+        decoder->lost_packet_closure = this;
     }
 
     static Napi::Function getClass(Napi::Env env)
@@ -234,6 +255,7 @@ public:
         this->lost_packet_callback = Napi::Persistent(cb);
         this->decoder->lost_packet_callback = lostPacketCallback;
         this->decoder->lost_packet_closure = this;
+
         return Napi::Value();
     }
 
@@ -408,11 +430,11 @@ public:
                                                    InstanceMethod("getStrainBridgeValues", &ChannelInfo::getStrainBridgeValues),
                                                    InstanceMethod("getStrainBridgeSubchannel", &ChannelInfo::getStrainBridgeSubchannel),
                                                    InstanceMethod("getStrainBridgeCount", &ChannelInfo::getStrainBridgeCount),
-                                                
+
                                                });
     }
 
-        Napi::Value checkAccelSelfTest(const Napi::CallbackInfo &info)
+    Napi::Value checkAccelSelfTest(const Napi::CallbackInfo &info)
     {
 
         double disabled = 0;
@@ -518,23 +540,23 @@ public:
         Napi::Object ob = Napi::Object::New(info.Env());
         ob.Set("bits_per_sample", channel->bits_per_sample);
         ob.Set("channel_type", channel->channel_type);
-        //Napi::Array chunks = Napi::Array::New(info.Env(), channel->chunk_count);
-        //for (int i = 0; i < channel->chunk_count; i++)
+        // Napi::Array chunks = Napi::Array::New(info.Env(), channel->chunk_count);
+        // for (int i = 0; i < channel->chunk_count; i++)
         //{
-            //asphodel_get_channel_chunk_blocking()
-            //printf("============================= %d %d\n", i, channel->chunk_lengths);
-            //Napi::Uint8Array chunk = Napi::Uint8Array::New(info.Env(), channel->chunk_lengths[i]);
-            //memcpy(chunk.Data(), channel->chunks[i], channel->chunk_lengths[i]);
-            //chunks[i] = chunk;
+        // asphodel_get_channel_chunk_blocking()
+        // printf("============================= %d %d\n", i, channel->chunk_lengths);
+        // Napi::Uint8Array chunk = Napi::Uint8Array::New(info.Env(), channel->chunk_lengths[i]);
+        // memcpy(chunk.Data(), channel->chunks[i], channel->chunk_lengths[i]);
+        // chunks[i] = chunk;
         //}
-        //ob.Set("chunks", chunks);
-        //Napi::Float32Array coefs = Napi::Float32Array::New(info.Env(), channel->coefficients_length);
-        //for (int i = 0; i < channel->coefficients_length; i++)
+        // ob.Set("chunks", chunks);
+        // Napi::Float32Array coefs = Napi::Float32Array::New(info.Env(), channel->coefficients_length);
+        // for (int i = 0; i < channel->coefficients_length; i++)
         //{
         //    coefs[i] = channel->coefficients[i];
         //}
-        
-        //ob.Set("coefficients", coefs);
+
+        // ob.Set("coefficients", coefs);
         ob.Set("data_bits", channel->data_bits);
         ob.Set("filler_bits", channel->filler_bits);
         ob.Set("maximum", channel->maximum);
@@ -543,7 +565,7 @@ public:
         ob.Set("samples", channel->samples);
         ob.Set("unit_type", channel->unit_type);
         ob.Set("chunk_count", channel->chunk_count);
-        //ob.Set("name", Napi::String::New(info.Env(), (char *)channel->name, channel->name_length));
+        // ob.Set("name", Napi::String::New(info.Env(), (char *)channel->name, channel->name_length));
         return ob;
     }
 
@@ -580,7 +602,7 @@ public:
 
     static Napi::Function GetClass(Napi::Env env)
     {
-        return DefineClass(env,"StreamInfo", {InstanceMethod("getInfo", &StreamInfo::getInfo)});
+        return DefineClass(env, "StreamInfo", {InstanceMethod("getInfo", &StreamInfo::getInfo)});
     }
 
     Napi::Value getInfo(const Napi::CallbackInfo &info)
@@ -619,7 +641,6 @@ public:
 
     Napi::Reference<Napi::Object> stream_info;
     Napi::Reference<Napi::Array> channel_infos;
-    
 
     StreamAndChannels(const Napi::CallbackInfo &info) : Napi::ObjectWrap<StreamAndChannels>(info)
     {
@@ -646,7 +667,6 @@ public:
             Napi::Object ob = channel_infos.Get(i).As<Napi::Object>();
             channel_info_instances[i] = ChannelInfo::Unwrap(ob)->channel_info;
         }
-        
 
         this->strAndCh = (AsphodelStreamAndChannels_t){
             .stream_id = id,
@@ -664,11 +684,11 @@ public:
     static Napi::Object Init(Napi::Env env, Napi::Object exports)
     {
         Napi::Function f = DefineClass(env, "StreamAndChannels", {
-            InstanceMethod("laugh", &StreamAndChannels::laugh),
-            InstanceMethod("getStreamInfo", &StreamAndChannels::getStreamInfo),
-            InstanceMethod("getChannelInfos", &StreamAndChannels::getChannelInfos),
+                                                                     InstanceMethod("laugh", &StreamAndChannels::laugh),
+                                                                     InstanceMethod("getStreamInfo", &StreamAndChannels::getStreamInfo),
+                                                                     InstanceMethod("getChannelInfos", &StreamAndChannels::getChannelInfos),
 
-            });
+                                                                 });
 
         Napi::Object *ob = env.GetInstanceData<Napi::Object>();
         Napi::FunctionReference *ctor = new Napi::FunctionReference();
@@ -679,11 +699,13 @@ public:
         return exports;
     }
 
-    Napi::Value getStreamInfo(const Napi::CallbackInfo &info) {
+    Napi::Value getStreamInfo(const Napi::CallbackInfo &info)
+    {
         return this->stream_info.Value();
     }
 
-    Napi::Value getChannelInfos(const Napi::CallbackInfo &info) {
+    Napi::Value getChannelInfos(const Napi::CallbackInfo &info)
+    {
         return this->channel_infos.Value();
     }
 
