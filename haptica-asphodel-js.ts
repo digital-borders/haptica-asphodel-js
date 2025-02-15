@@ -775,10 +775,12 @@ export function deviceToString(
         for (let j = 0; j < self.chunk_count; j++) {
             const chunk = device.getChannelChunk(i, j, 255);
             const slice = chunk.result.slice(0, chunk.length);
-            chunks.push([...slice])
+            //chunks.push([...slice])
+            slice.forEach((s)=>chunks.push(s))
             chunk_lengths.push(slice.length)
         }
-
+        var coefz: any[] = []
+        coefficients.result.slice(0, coefficients.length).forEach((c)=>coefz.push(c))
         channels.push({
             "_name_array": stringToHex(channel_name),
             "name_length": channel_name.length,
@@ -791,7 +793,7 @@ export function deviceToString(
             "minimum": self.minimum,
             "maximum": self.maximum,
             "resolution": self.resolution,
-            "_coefficients_array": [...coefficients.result.slice(0, coefficients.length)],
+            "_coefficients_array": coefz,
             "coefficients_length": coefficients.length,
             "_chunk_list": [...chunks],
             "_chunk_length_array": chunk_lengths,
@@ -845,7 +847,10 @@ export function deviceToString(
     const rgb_count = device.getRGBCount();
 
     for (let i = 0; i < rgb_count; i++) {
-        rgb_settings.push([...device.getRGBValues(i)])
+        //rgb_settings.push([...device.getRGBValues(i)])
+        var rgb_setting: any[] = [];
+        device.getRGBValues(i).forEach((r)=>rgb_setting.push(r))
+        rgb_setting.push(rgb_setting)
     }
 
     const setting_category_count = device.getSettingCategoryCount();
@@ -917,8 +922,10 @@ export function deviceToString(
     for (let i = 0; i < stream_count.count; i++) {
         const stream = device.getStream(i)
         const self = stream.getInfo()
+        var _ch: any[] = []
+        self.channel_index_list.slice(0, self.channel_count).forEach((v)=>_ch.push(v))
         streams.push({
-            _channel_array: [...self.channel_index_list.slice(0, self.channel_count)],
+            _channel_array: _ch,
             channel_count: self.channel_count,
             filler_bits: self.filler_bits,
             counter_bits: self.counter_bits,
@@ -959,7 +966,8 @@ export function deviceToString(
     var rf_ctrl_vars: any = null;
     try {
         var rf_ctrl = device.getRfPowerCtlVars(255)
-        rf_ctrl_vars = [...rf_ctrl.result.slice(0, rf_ctrl.length)]
+        rf_ctrl_vars = [];
+        rf_ctrl.result.slice(0, rf_ctrl.length).forEach((v)=>rf_ctrl_vars.push(v))
     } catch (e) { }
 
     var supports_device_mode = true;
@@ -1082,10 +1090,9 @@ export function deviceToString(
 
 
 export class ApdBuilder {
-    buffers: {
-        data: Uint8Array | string,
-        timestamp: number
-    }[]
+    stream: WriteStream;
+    path: string;
+
     constructor(
         device: Device,
         streams_to_activate: number[],
@@ -1094,7 +1101,8 @@ export class ApdBuilder {
             transfer_count: number;
             timeout: number;
         },
-        schedule_id: string
+        schedule_id: string,
+        path: string
     ) {
         const dev_str = deviceToString(device, streams_to_activate, [
             stream_counts.packet_count,
@@ -1103,66 +1111,58 @@ export class ApdBuilder {
         ], schedule_id)
 
         const now = Date.now() / 1000
-
-
-        this.buffers = []
-        this.buffers.push({
+        this.path = path;
+        this.stream = fs.createWriteStream(path)
+        this.writeBuffer({
             timestamp: now,
-            data: dev_str
+            buffer: dev_str
+        }, true).catch((e)=>{
+            throw e
         })
     }
 
     public update(data: Uint8Array) {
         var now = Date.now() / 1000;
-        this.buffers.push({
+        this.writeBuffer({
             timestamp: now,
-            data: data
+            buffer: data
         })
     }
 
-    writeBuffer(stream: WriteStream, index = 0) {
-        //console.log("writing chunks...", index)
-        if (index == this.buffers.length) {
-            stream.end();
-            return
-        }
-
-        let buffer = Buffer.alloc(12 + this.buffers[index].data.length);
-        buffer.writeDoubleBE(this.buffers[index].timestamp, 0);
-        buffer.writeUint32BE(this.buffers[index].data.length, 8);
-        if (index == 0) {
-            buffer.write(this.buffers[index].data as string, 12, "utf-8");
+    async writeBuffer(dat : {
+        timestamp: number,
+        buffer: any
+    }, head = false) {
+        let buffer = Buffer.alloc(12 + dat.buffer.length);
+        buffer.writeDoubleBE(dat.timestamp, 0);
+        buffer.writeUint32BE(dat.buffer.length, 8);
+        if (head) {
+            buffer.write(dat.buffer as string, 12, "utf-8");
         } else {
-            (this.buffers[index].data as Uint8Array).forEach((byte, i) => {
+            (dat.buffer as Uint8Array).forEach((byte, i) => {
                 buffer.writeUint8(byte, 12 + i)
             })
         }
-
-        if (stream.write(buffer) == false) {
-            stream.once("drain", () => {
-                this.writeBuffer(stream, index + 1)
-            })
-            return
-        }
-
-        this.writeBuffer(stream, index + 1)
+        this.stream.write(buffer, (err)=>{
+            if(err) throw err
+        })
     }
 
-    public finalFile(file_name: string) {
-        var stream = fs.createWriteStream(file_name);
-        stream.on("finish", () => {
+    public final(filename:string) {
+        this.stream.end()
+        this.stream.on("finish", () => {
             console.log("all chunks have been written...")
             var compressor = lzma.createCompressor()
-            var input = fs.createReadStream(file_name);
-            var file = fs.createWriteStream(file_name + ".apd");
+            var input = fs.createReadStream(this.path);
+            var file = fs.createWriteStream(filename + ".apd");
             input.pipe(compressor).pipe(file);
-
+            
             file.on("finish", () => {
-                console.log("apd file written successfully: ", file_name + ".apd")
-                fs.unlink(file_name, () => { });
+                console.log("apd file written successfully: ", this.path + ".apd")
+                fs.unlink(this.path, () => { });
             })
-
         })
-        this.writeBuffer(stream);
+
+
     }
 }

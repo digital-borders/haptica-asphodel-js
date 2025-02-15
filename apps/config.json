@@ -7,14 +7,14 @@
       "sensor": "WM5552",
       "sensorChannel": 0,
       "machine": "Compressor 2",
-      "duration": 1000,
+      "duration": 2000,
       "failure_delay": 20,
       "cron_start": "* * * * *",
       "operations": [
         {
           "operation": "mean",
           "params": {
-            "path": "/home/melo/Desktop/haptica-asphodel-js/examples/data",
+            "path": "/home/melo/Desktop/data",
             "type": "raw"
           }
         }

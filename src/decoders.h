@@ -18,6 +18,7 @@ public:
         this->decoder = decoder;
         decoder->callback = decodeCallback;
         decoder->closure = this;
+        this->stop = false;
     }
 
     static Napi::Function getClass(Napi::Env env)
@@ -126,13 +127,12 @@ public:
     static void decodeCallback(uint64_t counter, double *data, size_t samples, size_t subchannels, void *closure)
     {
         ChannelDecoder *dec = static_cast<ChannelDecoder *>(closure);
-        if (!dec->decode_callback.IsEmpty() && data != nullptr && !dec->stop)
+        if (dec != nullptr && dec->decoder != nullptr && !dec->decode_callback.IsEmpty() && data != nullptr)
         {
             if (dec->decode_callback.Env() == nullptr)
                 return;
             try
             {
-
                 Napi::Float64Array f = Napi::Float64Array::New(dec->decode_callback.Env(), samples * subchannels);
                 memcpy(f.Data(), data, (samples * subchannels) * sizeof(double));
                 dec->decode_callback.Call({Napi::Number::From<uint64_t>(dec->decode_callback.Env(), counter),
@@ -142,16 +142,19 @@ public:
             }
             catch (std::exception &e)
             {
+                printf("errror: %s\n", e.what());
             }
         }
     }
 
     ~ChannelDecoder()
     {
+        this->decoder->closure = nullptr;
         if (!this->decode_callback.IsEmpty())
         {
             this->decode_callback.Reset();
         }
+        this->decoder = nullptr;
     }
 };
 
@@ -159,6 +162,7 @@ class StreamDecoder : public Napi::ObjectWrap<StreamDecoder>
 {
     AsphodelStreamDecoder_t *decoder;
     Napi::FunctionReference lost_packet_callback;
+    Napi::Reference<Napi::Array> decoders;
 
 public:
     StreamDecoder(const Napi::CallbackInfo &info) : Napi::ObjectWrap<StreamDecoder>(info)
@@ -172,6 +176,16 @@ public:
         this->decoder = decoder;
         decoder->lost_packet_callback = StreamDecoder::lostPacketCallback;
         decoder->lost_packet_closure = this;
+
+        Napi::Array arr = Napi::Array::New(info.Env(), this->decoder->channels);
+        for (size_t i = 0; i < this->decoder->channels; i++)
+        {
+            Napi::Function constr = ChannelDecoder::getClass(info.Env());
+            Napi::Object ob = Napi::Object::New(info.Env());
+            ob.Set("decoder", Napi::External<AsphodelChannelDecoder_t>::New(info.Env(), this->decoder->decoders[i]));
+            arr[i] = constr.New({ob});
+        }
+        this->decoders = Napi::Persistent(arr);
     }
 
     static Napi::Function getClass(Napi::Env env)
@@ -216,15 +230,7 @@ public:
 
     Napi::Value getDecoders(const Napi::CallbackInfo &info)
     {
-        Napi::Array arr = Napi::Array::New(info.Env(), this->decoder->channels);
-        for (size_t i = 0; i < this->decoder->channels; i++)
-        {
-            Napi::Function constr = ChannelDecoder::getClass(info.Env());
-            Napi::Object ob = Napi::Object::New(info.Env());
-            ob.Set("decoder", Napi::External<AsphodelChannelDecoder_t>::New(info.Env(), this->decoder->decoders[i]));
-            arr[i] = constr.New({ob});
-        }
-        return arr;
+        return this->decoders.Value();
     }
 
     Napi::Value decode(const Napi::CallbackInfo &info)
@@ -262,7 +268,7 @@ public:
     static void lostPacketCallback(uint64_t current, uint64_t last, void *closure)
     {
         StreamDecoder *dec = static_cast<StreamDecoder *>(closure);
-        if (!dec->lost_packet_callback.IsEmpty())
+        if (dec != nullptr && dec->decoder != nullptr && !dec->lost_packet_callback.IsEmpty())
         {
             dec->lost_packet_callback.Call({
                 Napi::Number::New(dec->lost_packet_callback.Env(), current),
@@ -277,6 +283,11 @@ public:
         {
             this->lost_packet_callback.Reset();
         }
+
+        if(this->decoder) {
+            this->decoder->lost_packet_closure = nullptr;
+        }
+        this->decoders.Reset();
     }
 };
 
@@ -284,6 +295,7 @@ class DeviceDecoder : public Napi::ObjectWrap<DeviceDecoder>
 {
     AsphodelDeviceDecoder_t *decoder;
     Napi::FunctionReference unknown_id_callback;
+    Napi::Reference<Napi::Array> decoders;
 
 public:
     DeviceDecoder(const Napi::CallbackInfo &info) : Napi::ObjectWrap<DeviceDecoder>(info)
@@ -295,6 +307,18 @@ public:
         AsphodelDeviceDecoder_t *decoder = info[0].As<Napi::Object>().Get("decoder").As<Napi::External<AsphodelDeviceDecoder_t>>().Data();
         this->unknown_id_callback = Napi::FunctionReference();
         this->decoder = decoder;
+        decoder->unknown_id_callback = unknownIdCallback;
+        decoder->unknown_id_closure = this;
+
+        Napi::Array arr = Napi::Array::New(info.Env(), this->decoder->streams);
+        for (size_t i = 0; i < this->decoder->streams; i++)
+        {
+            Napi::Function constr = StreamDecoder::getClass(info.Env());
+            Napi::Object ob = Napi::Object::New(info.Env());
+            ob.Set("decoder", Napi::External<AsphodelStreamDecoder_t>::New(info.Env(), this->decoder->decoders[i]));
+            arr[i] = constr.New({ob});
+        }
+        this->decoders = Napi::Persistent(arr);
     }
 
     static Napi::Function getClass(Napi::Env env)
@@ -341,15 +365,7 @@ public:
 
     Napi::Value getDecoders(const Napi::CallbackInfo &info)
     {
-        Napi::Array arr = Napi::Array::New(info.Env(), this->decoder->streams);
-        for (size_t i = 0; i < this->decoder->streams; i++)
-        {
-            Napi::Function constr = StreamDecoder::getClass(info.Env());
-            Napi::Object ob = Napi::Object::New(info.Env());
-            ob.Set("decoder", Napi::External<AsphodelStreamDecoder_t>::New(info.Env(), this->decoder->decoders[i]));
-            arr[i] = constr.New({ob});
-        }
-        return arr;
+        return this->decoders.Value();
     }
 
     Napi::Value decode(const Napi::CallbackInfo &info)
@@ -386,7 +402,7 @@ public:
     static void unknownIdCallback(uint8_t id, void *closure)
     {
         DeviceDecoder *dec = static_cast<DeviceDecoder *>(closure);
-        if (!dec->unknown_id_callback.IsEmpty())
+        if (dec != nullptr && dec->decoder != nullptr && !dec->unknown_id_callback.IsEmpty())
         {
             dec->unknown_id_callback.Call({Napi::Number::New(dec->unknown_id_callback.Env(), id)});
         }
@@ -398,6 +414,11 @@ public:
         {
             this->unknown_id_callback.Reset();
         }
+
+        if(this->decoder) {
+            this->decoder->unknown_id_closure = nullptr;
+        }
+        this->decoders.Reset();
         this->decoder->free_decoder(this->decoder);
     }
 };
@@ -540,23 +561,7 @@ public:
         Napi::Object ob = Napi::Object::New(info.Env());
         ob.Set("bits_per_sample", channel->bits_per_sample);
         ob.Set("channel_type", channel->channel_type);
-        // Napi::Array chunks = Napi::Array::New(info.Env(), channel->chunk_count);
-        // for (int i = 0; i < channel->chunk_count; i++)
-        //{
-        // asphodel_get_channel_chunk_blocking()
-        // printf("============================= %d %d\n", i, channel->chunk_lengths);
-        // Napi::Uint8Array chunk = Napi::Uint8Array::New(info.Env(), channel->chunk_lengths[i]);
-        // memcpy(chunk.Data(), channel->chunks[i], channel->chunk_lengths[i]);
-        // chunks[i] = chunk;
-        //}
-        // ob.Set("chunks", chunks);
-        // Napi::Float32Array coefs = Napi::Float32Array::New(info.Env(), channel->coefficients_length);
-        // for (int i = 0; i < channel->coefficients_length; i++)
-        //{
-        //    coefs[i] = channel->coefficients[i];
-        //}
 
-        // ob.Set("coefficients", coefs);
         ob.Set("data_bits", channel->data_bits);
         ob.Set("filler_bits", channel->filler_bits);
         ob.Set("maximum", channel->maximum);
@@ -565,7 +570,7 @@ public:
         ob.Set("samples", channel->samples);
         ob.Set("unit_type", channel->unit_type);
         ob.Set("chunk_count", channel->chunk_count);
-        // ob.Set("name", Napi::String::New(info.Env(), (char *)channel->name, channel->name_length));
+
         return ob;
     }
 
