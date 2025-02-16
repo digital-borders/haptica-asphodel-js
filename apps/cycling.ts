@@ -26,15 +26,23 @@ export type DeviceConfig = {
     mqttTopic: string // The mqtt topic to publish the data to
 }
 
+
+export type MqttConfig= {
+    host: string, // The host of the mqtt broker
+    port: number, // The port of the mqtt broker
+    username: string, // The username of the mqtt broker
+    password: string, // The password of the mqtt broker
+    baseTopic: string // The base topic to publish the data to
+}
+
 export type Config = {
-    mqtt: {
-        host: string, // The host of the mqtt broker
-        port: number, // The port of the mqtt broker
-        username: string, // The username of the mqtt broker
-        password: string, // The password of the mqtt broker
-        baseTopic: string // The base topic to publish the data to
-    },
+    mqtt: MqttConfig,
     devices: DeviceConfig[]
+}
+
+export type AquireConfig ={
+    mqtt_config: MqttConfig,
+    device_config: DeviceConfig
 }
 
 const path_to_config = "apps/config.json";
@@ -49,7 +57,11 @@ async function main() {
 
 
     for (let config_device of config.devices) {
-        await work_q.add(config_device.receiver + "-" + config_device.sensor, config_device, {
+        var data:AquireConfig = {
+            mqtt_config: config.mqtt,
+            device_config: config_device
+        }
+        await work_q.add(config_device.receiver + "-" + config_device.sensor, data, {
             repeat: {
                 pattern: config_device.cron_start
             }

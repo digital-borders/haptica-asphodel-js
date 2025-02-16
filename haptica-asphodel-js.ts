@@ -1148,7 +1148,11 @@ export class ApdBuilder {
         })
     }
 
-    public final(filename:string) {
+    public final(filename:string|null) {
+        if(filename == null) {
+            fs.unlink(this.path, () => { });
+            return
+        }
         this.stream.end()
         this.stream.on("finish", () => {
             console.log("all chunks have been written...")
@@ -1162,7 +1166,5 @@ export class ApdBuilder {
                 fs.unlink(this.path, () => { });
             })
         })
-
-
     }
 }

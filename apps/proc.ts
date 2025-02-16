@@ -1,6 +1,6 @@
 import { Job } from "bullmq";
 import { ApdBuilder, ASPHODEL_PROTOCOL_TYPE_BOOTLOADER, ChannelDecoder, ChannelInfo, createDeviceDecoder, Device, DeviceDecoder, deviceToString, getStreamingCounts, StreamAndChannels, StreamInfo, TCPDeinit, TCPFindDevices, TCPInit, UnitFormatter, USBDeInit, USBFindDevices, USBInit } from "../haptica-asphodel-js";
-
+import * as mqtt from "mqtt"
 
 type ChannelClosure = {
     unit_formatter: UnitFormatter,
@@ -49,12 +49,15 @@ function make2DArray(array: Float64Array, rows: number, columns: number, out: Fl
 class DeviceData {
     //serial_number: string
     channel: number
-    streams: { counter: number, values: Float64Array[] }[][]
+    streams: Float64Array[][]
     unit_formatter: UnitFormatter
+    subchannels: string[]
+
 
     constructor(channel: number) {
         this.streams = []
         this.channel = channel;
+        this.subchannels = []
     }
 }
 
@@ -65,10 +68,6 @@ function createDeviceInfo(device: Device, out: DeviceData | null): DeviceInfo {
         let stream = device.getStream(i);
         let channels: ChannelInfo[] = []
         let stream_info = stream.getInfo();
-
-        if (out) {
-            out.streams[i] = []
-        }
 
         if (stream_info.channel_count == 0) {
             throw new Error(`Error: stream ${i} has 0 channels`);
@@ -85,7 +84,6 @@ function createDeviceInfo(device: Device, out: DeviceData | null): DeviceInfo {
     let decoder = createDeviceDecoder(stream_infos, stream_count.filler_bits, stream_count.id_bits);
 
     let serial_number = device.getSerialNumber();
-    //if (out) out.serial_number = serial_number;
 
     decoder.setUnknownIDCallback((id) => {
         console.log(`Unknown stream id ${id} on ${serial_number}`)
@@ -95,27 +93,23 @@ function createDeviceInfo(device: Device, out: DeviceData | null): DeviceInfo {
 
 
     decs.forEach((dec, i) => {
-        let stream_info = stream_infos[i].getStreamInfo();
-
         dec.setLostPacketCallback((current, last) => {
-            console.log(`=================== Lost ${current - last - 1} packets from ${serial_number} stream ${i} ========================`)
+            console.log(`DECODING:  Lost ${current - last - 1} packets from ${serial_number} stream ${i}`)
         })
 
         dec.getDecoders().forEach((channel_decoder, j) => {
             if (out == null) return;
-            let channel_info = stream_infos[i].getChannelInfos()[j];
-            var chinfo = channel_info.getInfo()
-            var unit_formatter = new UnitFormatter(chinfo.unit_type, chinfo.minimum, chinfo.maximum, chinfo.resolution, true);
-            channel_decoder.setConversionFactor(unit_formatter.getConversionScale(), unit_formatter.getConversionOffset())
-            out.unit_formatter = unit_formatter;
             channel_decoder.setDecodeCallback((counter, data, samples, subchannels) => {
                 if (j == out.channel) {
-                    let arr = []
+                    let channel_info = stream_infos[i].getChannelInfos()[j];
+                    var chinfo = channel_info.getInfo()
+                    var unit_formatter = new UnitFormatter(chinfo.unit_type, chinfo.minimum, chinfo.maximum, chinfo.resolution, true);
+                    channel_decoder.setConversionFactor(unit_formatter.getConversionScale(), unit_formatter.getConversionOffset())
+                    out.unit_formatter = unit_formatter;
+                    out.subchannels = channel_decoder.getSubChannelNames()
+                    let arr: Float64Array[] = []
                     make2DArray(data, samples, subchannels, arr);
-                    out.streams[i].push({
-                        counter: counter,
-                        values: arr
-                    });
+                    out.streams.push(arr)
                 }
             })
         })
@@ -142,8 +136,6 @@ function hasRadioScanPower(device: Device) {
 
 function collectScanResults(device: Device) {
     var results = device.getRadioExtraScanResults(255)
-    console.log(results)
-
     var scan_powers = new Map()
     if (hasRadioScanPower(device)) {
 
@@ -151,7 +143,6 @@ function collectScanResults(device: Device) {
             Math.floor(device.getMaxOutgoingParamLength() / 4),
             device.getMaxIncomingParamLength()
         )
-        //console.log("device has radio scan power", power_max_queries)
 
         for (let i = 0; i < results.length; i++) {
             if (i == power_max_queries) break;
@@ -167,8 +158,6 @@ function collectScanResults(device: Device) {
             }
         }
     }
-    console.log(scan_powers)
-
     var scans: {
         serial_number: number,
         bootloader: boolean,
@@ -194,12 +183,7 @@ function doRadioScan(device: Device) {
     console.log("scanning fo remotes devices")
     device.startRadioScan()
     sleep(1000);
-    //let serials = device.getRadioScanResults(255)
-    //return serials.sort();
     var scans = collectScanResults(device)
-
-    console.log(scans)
-
     var sensors: Device[] = []
 
     scans.forEach((scan) => {
@@ -216,7 +200,6 @@ function doRadioScan(device: Device) {
             remote.waitForConnect(1000)
 
             if (remote.getSerialNumber() == "") {
-                console.log("No serial number when fetching device info");
                 throw new Error("No serial number when fetching device info")
             }
 
@@ -316,7 +299,10 @@ async function aquireDataSaving(
         apd_path
     )
 
-    device.startStreamingPackets(
+    try {
+
+        
+        device.startStreamingPackets(
         streaming_counts.packet_count,
         streaming_counts.transfer_count,
         streaming_counts.timeout, (status, stream_data, packet_size, packet_count) => {
@@ -326,37 +312,41 @@ async function aquireDataSaving(
                     device_info.decoder.decode(stream_data.slice(packet * packet_size))
                 }
             } else if (status == -7) {
-                console.log("==========TIMEOUT=======================")
+                console.log("STREAMING: Timeout")
             } else {
-                console.log(`Bad status ${status} in streaming packet callback`);
+                console.log(`STREAMING: Bad status ${status}`);
             }
         });
 
-
-    startStreams(device, streams_to_activate);
-
-
-    await new Promise((resolve) => {
-        let begin = Date.now();
-        var progress = 0;
-        function loop() {
-            if (Date.now() - begin < time) {
-                try {
-                    device.poll(100)
-                } catch (e) {
-                    console.error(e)
+        
+        startStreams(device, streams_to_activate);
+        
+        
+        await new Promise((resolve) => {
+            let begin = Date.now();
+            var progress = 0;
+            function loop() {
+                if (Date.now() - begin < time) {
+                    try {
+                        device.poll(100)
+                    } catch (e) {
+                        console.error(e)
+                    }
+                    setImmediate(loop)
+                    return;
                 }
-                setImmediate(loop)
-                return;
+                device.stopStreamingPackets();
+                device.poll(1000);
+                stopStreams(device, streams_to_activate)
+                resolve(true)
             }
-            device.stopStreamingPackets();
-            device.poll(1000);
-            stopStreams(device, streams_to_activate)
-            resolve(true)
-        }
-        loop()
-    })
-
+            loop()
+        })
+        
+    } catch (e) {
+        apd.final(null);
+        throw e;
+    }
     return { apd: apd, out: out }
 }
 
@@ -367,7 +357,7 @@ function checkAllConnectedReceivers() {
 
 
 import * as fs from "fs"
-import { DeviceConfig } from "./cycling";
+import { AquireConfig, DeviceConfig } from "./cycling";
 
 function init() {
     USBInit()
@@ -379,53 +369,64 @@ function deinit() {
     TCPDeinit()
 }
 
-function calculateMean(data: Float64Array) {
+function calculateMean(data: number[]) {
     return data.reduce((prev, curr) => prev + curr) / data.length;
 }
 
-function calculateVariance(data: Float64Array) {
-    var mean = calculateMean(data)
+function calculateVariance(mean: number, data: number[]) {
     var sqdiff = data.map((value) => Math.pow(value - mean, 2))
     return calculateMean(sqdiff);
 }
 
-function calculateStandardDeviation(data: Float64Array) {
-    return Math.sqrt(calculateVariance(data))
+function calculateStandardDeviation(mean: number, data: number[]) {
+    return Math.sqrt(calculateVariance(mean, data))
 }
 
-function calculateChannelMean(out: DeviceData) {
-    var stream_means: any[] = []
-    out.streams.forEach((stream) => {
-        var means: any[] = [];
-        stream.forEach((channel) => {
-            //means.push({ counter: channel.counter, mean: calculateMean(channel.values) })
+function flattenByCol(data: Float64Array[][], col: number) {
+    var out: number[] = []
+    data.forEach((row) => {
+        row.forEach((col) => {
+            col.forEach((n) => out.push(n))
         })
-        var channel_sum = 0;
-        means.forEach((mean) => {
-            channel_sum += mean.mean;
-        })
-        stream_means.push(channel_sum / means.length);
     })
-
-    return stream_means
+    return out;
 }
 
-function calculateChannelStandardDeviation(out: DeviceData) {
-    var stream_stdds: any[] = []
-    out.streams.forEach((stream) => {
-        var stdds: Float64Array = new Float64Array(stream.length);
-        stream.forEach((channel, i) => {
-            //var stdd = calculateStandardDeviation(channel.values);
-            //stdds[i] = stdd;
+function calculateChannelStats(out: DeviceData) {
+    var means: {
+        subchannel: string,
+        mean: {
+            value: number,
+            bare: string,
+            ascii: string,
+            html: string
+        },
+        stddev: {
+            value: number,
+            bare: string,
+            ascii: string,
+            html: string
+        },
+    }[] = []
+    out.subchannels.forEach((subchannel, i) => {
+        var sub_channel_data = flattenByCol(out.streams, i)
+        var mean = calculateMean(sub_channel_data);
+        var stddev = calculateStandardDeviation(mean, sub_channel_data);
+        means.push({
+            subchannel, mean: {
+                value: mean,
+                bare: out.unit_formatter.FormatBare(mean),
+                ascii: out.unit_formatter.FormatAscii(mean),
+                html: out.unit_formatter.FormatHtml(mean)
+            }, stddev: {
+                value: stddev,
+                bare: out.unit_formatter.FormatBare(stddev),
+                ascii: out.unit_formatter.FormatAscii(stddev),
+                html: out.unit_formatter.FormatHtml(stddev)
+            }
         })
-        var channel_sum = 0;
-        stdds.forEach((stdd) => {
-            channel_sum += stdd;
-        })
-        stream_stdds.push(channel_sum / stdds.length);
     })
-
-    return stream_stdds
+    return means
 }
 
 function closeSensors(sensors: Device[]) {
@@ -438,21 +439,21 @@ function closeSensors(sensors: Device[]) {
 
 async function doWorkOnDevice(job: any) {
     init()
-    var config_device: DeviceConfig = job.data;
+    var config:AquireConfig = job.data;
 
     var devices = checkAllConnectedReceivers();
 
     var actual_device = devices.find((dev) => {
         try {
             dev.open()
-            return dev.getSerialNumber() == config_device.receiver
+            return dev.getSerialNumber() == config.device_config.receiver
         } catch (e) {
             return false
         } finally {
             dev.close()
         }
     })
-    if (!actual_device) throw new Error(`device ${config_device.receiver} not found.`);
+    if (!actual_device) throw new Error(`device ${config.device_config.receiver} not found.`);
     actual_device.open();
     var sensors: Device[] = [];
 
@@ -466,23 +467,25 @@ async function doWorkOnDevice(job: any) {
     sensors.forEach((sensor) => {
         console.log("found sensor: ", sensor.getSerialNumber())
     })
-    var actual_sensor = sensors.find((sensor) => sensor.getSerialNumber() == config_device.sensor)
+    var actual_sensor = sensors.find((sensor) => sensor.getSerialNumber() == config.device_config.sensor)
 
     if (actual_sensor == undefined) {
         closeSensors(sensors);
         actual_device.close()
-        throw new Error(`sensor ${config_device.sensor} not connected to ${(actual_device as Device).getSerialNumber()}.`);
+        throw new Error(`sensor ${config.device_config.sensor} not connected to ${(actual_device as Device).getSerialNumber()}.`);
     }
 
-
+    var results: any = null;
     try {
 
-        var results = await aquireDataSaving(
+        results = await aquireDataSaving(
             actual_sensor as Device,
-            config_device.duration, "demo", job, config_device.receiver + "-" + config_device.sensor, config_device.sensorChannel);
+            config.device_config.duration, "demo", job, config.device_config.receiver + "-" + config.device_config.sensor, config.device_config.sensorChannel);
 
+        var stats = calculateChannelStats(results.out);
+        console.log("stats: ", stats)
 
-        for (var op of config_device.operations) {
+        for (var op of config.device_config.operations) {
             switch (op.operation.toLowerCase()) {
                 case "save":
                     const params: {
@@ -492,15 +495,40 @@ async function doWorkOnDevice(job: any) {
 
                     if (params.type == "raw") {
                         results.apd.final(op.path)
+                    } else if(params.type == "processed"){
+                        fs.writeFileSync(params.path, JSON.stringify(stats))
                     } else throw new Error(`processed output not implemented.`)
                     break
                 case "stddev":
-                    var stddev = calculateChannelStandardDeviation(results.out);
-                    console.log("stddev: ", stddev)
-                    break
                 case "mean":
-                    var mean = calculateChannelMean(results.out);
-                    console.log("mean: ", mean)
+                    var client = mqtt.connect(`${config.mqtt_config.host}:${config.mqtt_config.port}`, {
+                        connectTimeout: 1000,
+                        username: config.mqtt_config.username,
+                        password: config.mqtt_config.password,
+                      })
+                      
+                      client.on("error", (e) => {
+                        console.log("error: ", e)
+                        throw e
+                      })
+                      
+                      client.on('connect', () => {
+                        console.log('Connected to MQTT broker');
+                        client.publish(config.device_config.mqttTopic,JSON.stringify(stats), (err) => {
+                          if (!err) {
+                            console.log("message published")
+                            client.end((err) => {
+                              if (err) {
+                                console.log("failed to disconnect")
+                              } else {
+                                console.log("Disconnected successfully")
+                              }
+                            })
+                          } else {
+                            console.log("message publish failed")
+                          }
+                        })
+                      });
                     break
                 default: throw `unhandled operation: ${op.operation}.`
             }
@@ -511,6 +539,9 @@ async function doWorkOnDevice(job: any) {
     } finally {
         closeSensors(sensors)
         actual_device.close()
+        if(results){
+            results.apd.final(null);
+        }
     }
 }
 

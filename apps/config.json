@@ -1,11 +1,17 @@
 {
-  "mqtt": {},
+  "mqtt": {
+    "host": "mqtt://localhost",
+    "port": 1883,
+    "username": "user",
+    "password": "password",
+    "baseTopic": "sturla"
+  },
   "devices": [
     {
       "type": "asphodel",
       "receiver": "WMRP4290",
       "sensor": "WM5552",
-      "sensorChannel": 1,
+      "sensorChannel": 2,
       "machine": "Compressor 2",
       "duration": 2000,
       "failure_delay": 20,
