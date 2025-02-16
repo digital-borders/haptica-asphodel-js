@@ -69,6 +69,7 @@ function createDeviceInfo(device: Device): DeviceInfo {
 
     decs.forEach((dec, i) => {
         let stream_info = stream_infos[i].getStreamInfo();
+        
         dec.setLostPacketCallback((current, last) => {
             console.log(`Lost ${current - last - 1} from ${serial_number} stream ${i} `)
         })

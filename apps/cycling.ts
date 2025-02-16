@@ -54,21 +54,8 @@ async function main() {
                 pattern: config_device.cron_start
             }
         })
-//
-        //await doWorkOnDevice({data: config_device})
-
-        //})
-        //.catch((e) => {
-        //        console.log(`Error ${e.toString()}: waiting for ${config_device.failure_delay} before retrying...`)
-        //        var bgin = Date.now();
-        //        while(Date.now() - bgin < config_device.failure_delay){};
-        //})
-        //})
-
     }
-    //console.log(path.dirname(fileURLToPath(import.meta.url))+"/proc.js")
     var processor_file = "/home/melo/Desktop/haptica-asphodel-js/apps/proc.js"
-    //path.dirname(fileURLToPath(import.meta.url))+"/proc.js";
     var worker = new Worker("aquire-data", processor_file, {
         connection
     })
@@ -93,43 +80,6 @@ async function main() {
             console.log("failed to start worker", e)
         })
     }
-
-
-    //setInterval(1000, async ()=>{
-    //    console.log("---tick---")
-    //    log("=========work status=====")
-    //    log("   =========completed========")
-    //    var completed = await work_q.getCompleted();
-    //    if(completed.length > 0) {
-    //        completed.forEach(element => {
-    //            log(element.name)
-    //        });
-    //    } else {
-    //        log("None");
-    //    }
-    //    log("   =========completed========")
-    //    log("   =========failed========")
-    //    var failed = await work_q.getFailed();
-    //    if(failed.length > 0) {
-    //        failed.forEach(element => {
-    //            log(element.name)
-    //        });
-    //    } else {
-    //        log("None");
-    //    }
-    //    log("   =========completed========")
-    //    log("   =========waiting========")
-    //    var waiting = await work_q.getWaiting();
-    //    if(waiting.length > 0) {
-    //        waiting.forEach(element => {
-    //            log(element.name)
-    //        });
-    //    } else {
-    //        log("None");
-    //    }
-    //    log("   =========waiting========")
-    //    log("=========work status=====")
-    //})
 }
 
 

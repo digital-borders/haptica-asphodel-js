@@ -49,7 +49,8 @@ function make2DArray(array: Float64Array, rows: number, columns: number, out: Fl
 class DeviceData {
     //serial_number: string
     channel: number
-    streams: { counter: number, values: Float64Array }[][]
+    streams: { counter: number, values: Float64Array[] }[][]
+    unit_formatter: UnitFormatter
 
     constructor(channel: number) {
         this.streams = []
@@ -94,28 +95,26 @@ function createDeviceInfo(device: Device, out: DeviceData | null): DeviceInfo {
 
 
     decs.forEach((dec, i) => {
-        dec.setLostPacketCallback((current, last) => {
-            console.log(`${current} ${last}=================== Lost ${current - last - 1} packets from ${serial_number} stream ${i} ========================`)
-        })
+        let stream_info = stream_infos[i].getStreamInfo();
 
-        //var channel_decoders = dec.getDecoders();
-        //let  ch = 0;
-        //for(let channel_decoder of channel_decoders) {
-        //    channel_decoder.setDecodeCallback((counter, data, samples, subchannels)=>{
-        //        console.log(`[${ch}] counter: ${counter}, samples: ${samples}, subchannels: ${subchannels}`)
-        //    })
-        //    ch++
-        //}
+        dec.setLostPacketCallback((current, last) => {
+            console.log(`=================== Lost ${current - last - 1} packets from ${serial_number} stream ${i} ========================`)
+        })
 
         dec.getDecoders().forEach((channel_decoder, j) => {
             if (out == null) return;
+            let channel_info = stream_infos[i].getChannelInfos()[j];
+            var chinfo = channel_info.getInfo()
+            var unit_formatter = new UnitFormatter(chinfo.unit_type, chinfo.minimum, chinfo.maximum, chinfo.resolution, true);
+            channel_decoder.setConversionFactor(unit_formatter.getConversionScale(), unit_formatter.getConversionOffset())
+            out.unit_formatter = unit_formatter;
             channel_decoder.setDecodeCallback((counter, data, samples, subchannels) => {
                 if (j == out.channel) {
-                    //let arr = []
-                    //make2DArray(data, samples, subchannels, arr);
+                    let arr = []
+                    make2DArray(data, samples, subchannels, arr);
                     out.streams[i].push({
                         counter: counter,
-                        values: data
+                        values: arr
                     });
                 }
             })
@@ -313,7 +312,7 @@ async function aquireDataSaving(
         getStreamingCounts(device_info.info_array, response_time, buffer_time, timeout)
 
     let apd = new ApdBuilder(
-        device, streams_to_activate, streaming_counts, schedule_id, 
+        device, streams_to_activate, streaming_counts, schedule_id,
         apd_path
     )
 
@@ -358,7 +357,7 @@ async function aquireDataSaving(
         loop()
     })
 
-    return {apd: apd, out: out}
+    return { apd: apd, out: out }
 }
 
 
@@ -399,7 +398,7 @@ function calculateChannelMean(out: DeviceData) {
     out.streams.forEach((stream) => {
         var means: any[] = [];
         stream.forEach((channel) => {
-            means.push({ counter: channel.counter, mean: calculateMean(channel.values) })
+            //means.push({ counter: channel.counter, mean: calculateMean(channel.values) })
         })
         var channel_sum = 0;
         means.forEach((mean) => {
@@ -416,8 +415,8 @@ function calculateChannelStandardDeviation(out: DeviceData) {
     out.streams.forEach((stream) => {
         var stdds: Float64Array = new Float64Array(stream.length);
         stream.forEach((channel, i) => {
-            var stdd = calculateStandardDeviation(channel.values);
-            stdds[i] = stdd;
+            //var stdd = calculateStandardDeviation(channel.values);
+            //stdds[i] = stdd;
         })
         var channel_sum = 0;
         stdds.forEach((stdd) => {
@@ -429,12 +428,19 @@ function calculateChannelStandardDeviation(out: DeviceData) {
     return stream_stdds
 }
 
+function closeSensors(sensors: Device[]) {
+    sensors.forEach((sensor) => {
+        console.log("closing sensor: ", sensor.getSerialNumber())
+        sensor.close();
+        sensor.free();
+    })
+}
+
 async function doWorkOnDevice(job: any) {
     init()
     var config_device: DeviceConfig = job.data;
 
     var devices = checkAllConnectedReceivers();
-
 
     var actual_device = devices.find((dev) => {
         try {
@@ -448,50 +454,64 @@ async function doWorkOnDevice(job: any) {
     })
     if (!actual_device) throw new Error(`device ${config_device.receiver} not found.`);
     actual_device.open();
-    var sensors = await checkSensorsConnected(actual_device as Device);
+    var sensors: Device[] = [];
+
+    try {
+        sensors = await checkSensorsConnected(actual_device as Device);
+    } catch (e) {
+        actual_device.close();
+        throw e;
+    }
 
     sensors.forEach((sensor) => {
         console.log("found sensor: ", sensor.getSerialNumber())
     })
     var actual_sensor = sensors.find((sensor) => sensor.getSerialNumber() == config_device.sensor)
 
-    if (actual_sensor == undefined) throw new Error(`sensor ${config_device.sensor} not connected to ${(actual_device as Device).getSerialNumber()}.`);
-
-    var results = await aquireDataSaving(
-        actual_sensor as Device,
-        config_device.duration, "demo", job, config_device.receiver+"-"+config_device.sensor, config_device.sensorChannel);
-
-    for (var op of config_device.operations) {
-        switch (op.operation.toLowerCase()) {
-            case "save":
-                const params: {
-                    "path": string, // The path to save the data
-                    "type": "raw" | "processed" // The type of the data: raw is the .apd file with the raw data from sensor at full speed
-                } = op.params;
-
-                if (params.type == "raw") {
-                    results.apd.final(op.path)
-                } else throw new Error(`processed output not implemented.`)
-                break
-            case "stddev":
-                var stddev = calculateChannelStandardDeviation(results.out);
-                console.log("stddev: ", stddev)
-                break
-            case "mean":
-                var mean = calculateChannelMean(results.out);
-                console.log("mean: ", mean)
-                break
-            default: throw `unhandled operation: ${op.operation}.`
-        }
+    if (actual_sensor == undefined) {
+        closeSensors(sensors);
+        actual_device.close()
+        throw new Error(`sensor ${config_device.sensor} not connected to ${(actual_device as Device).getSerialNumber()}.`);
     }
 
-    sensors.forEach((sensor) => {
-        console.log("closing sensor: ", sensor.getSerialNumber())
-        sensor.close();
-        sensor.free();
-    })
 
-    actual_device.close()
+    try {
+
+        var results = await aquireDataSaving(
+            actual_sensor as Device,
+            config_device.duration, "demo", job, config_device.receiver + "-" + config_device.sensor, config_device.sensorChannel);
+
+
+        for (var op of config_device.operations) {
+            switch (op.operation.toLowerCase()) {
+                case "save":
+                    const params: {
+                        "path": string, // The path to save the data
+                        "type": "raw" | "processed" // The type of the data: raw is the .apd file with the raw data from sensor at full speed
+                    } = op.params;
+
+                    if (params.type == "raw") {
+                        results.apd.final(op.path)
+                    } else throw new Error(`processed output not implemented.`)
+                    break
+                case "stddev":
+                    var stddev = calculateChannelStandardDeviation(results.out);
+                    console.log("stddev: ", stddev)
+                    break
+                case "mean":
+                    var mean = calculateChannelMean(results.out);
+                    console.log("mean: ", mean)
+                    break
+                default: throw `unhandled operation: ${op.operation}.`
+            }
+        }
+
+    } catch (e) {
+        throw e
+    } finally {
+        closeSensors(sensors)
+        actual_device.close()
+    }
 }
 
 
@@ -500,7 +520,7 @@ export default async (job) => {
         console.log(`worker working on ${job.name}`)
         try {
             await doWorkOnDevice(job);
-        } catch(e) {
+        } catch (e) {
             console.error(e)
             throw e;
         }

@@ -5,7 +5,7 @@
       "type": "asphodel",
       "receiver": "WMRP4290",
       "sensor": "WM5552",
-      "sensorChannel": 0,
+      "sensorChannel": 1,
       "machine": "Compressor 2",
       "duration": 2000,
       "failure_delay": 20,
