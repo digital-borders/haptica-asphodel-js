@@ -13,19 +13,59 @@
       "sensor": "WM5552",
       "sensorChannel": 2,
       "machine": "Compressor 2",
-      "duration": 2000,
+      "duration": 60000,
       "failure_delay": 20,
-      "cron_start": "* * * * *",
+      "cron_start": "*/5 * * * *",
       "operations": [
         {
           "operation": "mean",
           "params": {
-            "path": "/home/melo/Desktop/data",
+            "path": "/Users/carmelofiorello/Haptica/LibUsb/Upwork/haptica-asphodel-js/data",
             "type": "raw"
           }
         }
       ],
       "mqttTopic": "sensors/WM5552"
+    },
+    {
+      "type": "asphodel",
+      "receiver": "WMRTCP12755",
+      "sensor": "WM5773",
+      "sensorChannel": 2,
+      "machine": "Compressor 3",
+      "duration": 60000,
+      "failure_delay": 20,
+      "cron_start": "*/5 * * * *",
+      "operations": [
+        {
+          "operation": "mean",
+          "params": {
+            "path": "/Users/carmelofiorello/Haptica/LibUsb/Upwork/haptica-asphodel-js/data",
+            "type": "raw"
+          }
+        }
+      ],
+      "mqttTopic": "sensors/WM5773"
+    },
+    {
+      "type": "asphodel",
+      "receiver": "WMRTCP12755",
+      "sensor": "WM6359",
+      "sensorChannel": 2,
+      "machine": "Compressor 4",
+      "duration": 60000,
+      "failure_delay": 20,
+      "cron_start": "*/5 * * * *",
+      "operations": [
+        {
+          "operation": "mean",
+          "params": {
+            "path": "/Users/carmelofiorello/Haptica/LibUsb/Upwork/haptica-asphodel-js/data",
+            "type": "raw"
+          }
+        }
+      ],
+      "mqttTopic": "sensors/WM6359"
     }
   ]
 }

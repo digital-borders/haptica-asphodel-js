@@ -12,3 +12,4 @@ samplez
 *.log
 *.txt
 proc.js
+.venv/

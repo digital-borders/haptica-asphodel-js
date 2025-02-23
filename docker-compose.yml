@@ -1,0 +1,35 @@
+services:
+  redis:
+    ports:
+      - '6379:6379'
+    image: redis/redis-stack-server:latest
+    volumes:
+      - redis-data:/data
+  mosquitto:
+    image: eclipse-mosquitto
+    hostname: mosquitto
+    container_name: mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto:/etc/mosquitto
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+  bullboard:
+    container_name: bullboard
+    image: deadly0/bull-board
+    restart: always
+    ports:
+      - 3000:3000
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      #REDIS_PASSWORD: example-password
+      #REDIS_USE_TLS: 'false'
+      #BULL_PREFIX: bull
+    depends_on:
+      - redis
+
+volumes:
+  redis-data:

@@ -2,10 +2,9 @@
 
 This is a TypeScript library for working with the Asphodel protocol.
 
-## Installation
+## How to run cyc
 
-### Mac OS ARM
+- Start docker with `docker compose up`
+- Run `npm run cyc` in another terminal
 
-```bash
-npm run install:mac-arm64
-```
+now you can go to `http://localhost:3000` and see the bull board to monitor the jobs
