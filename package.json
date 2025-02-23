@@ -7,7 +7,7 @@
     "test": "node binding.js",
     "gyp-configure": "node-gyp configure",
     "gyp-build": "node-gyp build",
-    "cyc": "tsc ./apps/cycling.ts && node ./apps/cycling.js"
+    "cyc": "tsc ./apps/*.ts && node ./apps/cycling.js"
   },
   "keywords": [],
   "author": "",

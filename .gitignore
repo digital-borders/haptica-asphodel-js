@@ -13,3 +13,4 @@ samplez
 *.txt
 proc.js
 .venv/
+data/

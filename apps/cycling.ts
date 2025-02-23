@@ -8,7 +8,6 @@ import { fileURLToPath } from "url";
 
 import * as fs from "fs";
 
-
 export type DeviceConfig = {
   type: string; // The type of the device
   receiver: string; // The id of the receiver the sensor is connected to
@@ -34,11 +33,13 @@ export type MqttConfig = {
 };
 
 export type Config = {
+  basePath: string;
   mqtt: MqttConfig;
   devices: DeviceConfig[];
 };
 
 export type AquireConfig = {
+  base_path: string;
   mqtt_config: MqttConfig;
   device_config: DeviceConfig;
 };
@@ -47,6 +48,8 @@ const path_to_config = "apps/config.json";
 
 async function main() {
   const connection = new IORedis({ maxRetriesPerRequest: null });
+  // Empty redis
+  await connection.flushall();
   const work_q = new Queue("aquire-data");
 
   var config_str: string = fs.readFileSync(path_to_config).toString();
@@ -54,6 +57,7 @@ async function main() {
 
   for (let config_device of config.devices) {
     var data: AquireConfig = {
+      base_path: config.basePath,
       mqtt_config: config.mqtt,
       device_config: config_device,
     };
