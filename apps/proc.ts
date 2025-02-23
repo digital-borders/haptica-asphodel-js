@@ -141,8 +141,8 @@ function createDeviceInfo(device: Device, out: DeviceData | null): DeviceInfo {
         (counter, data, samples, subchannels) => {
           if (j == out.channel) {
             let channel_info = stream_infos[i].getChannelInfos()[j];
-            var chinfo = channel_info.getInfo();
-            var unit_formatter = new UnitFormatter(
+            const chinfo = channel_info.getInfo();
+            const unit_formatter = new UnitFormatter(
               chinfo.unit_type,
               chinfo.minimum,
               chinfo.maximum,
@@ -182,20 +182,20 @@ function hasRadioScanPower(device: Device) {
 }
 
 function collectScanResults(device: Device) {
-  var results = device.getRadioExtraScanResults(255);
-  var scan_powers = new Map();
+  const results = device.getRadioExtraScanResults(255);
+  const scan_powers = new Map();
   if (hasRadioScanPower(device)) {
-    var power_max_queries = Math.min(
+    const power_max_queries = Math.min(
       Math.floor(device.getMaxOutgoingParamLength() / 4),
       device.getMaxIncomingParamLength()
     );
 
     for (let i = 0; i < results.length; i++) {
       if (i == power_max_queries) break;
-      var result_subset = results.slice(i);
-      var serials: number[] = [];
+      const result_subset = results.slice(i);
+      const serials: number[] = [];
       result_subset.forEach((r) => serials.push(r.serial_number));
-      var powers = device.getRadioScanPower(new Uint32Array(serials));
+      const powers = device.getRadioScanPower(new Uint32Array(serials));
 
       for (let sn = 0; sn < serials.length; sn++) {
         if (powers[sn] != 0x7f) {
@@ -204,7 +204,7 @@ function collectScanResults(device: Device) {
       }
     }
   }
-  var scans: {
+  const scans: {
     serial_number: number;
     bootloader: boolean;
     asphodel_type: number;
@@ -212,7 +212,7 @@ function collectScanResults(device: Device) {
     scan_strength: number;
   }[] = [];
   results.forEach((r) => {
-    var power = scan_powers.get(r.serial_number);
+    const power = scan_powers.get(r.serial_number);
     scans.push({
       serial_number: r.serial_number,
       bootloader: (r.asphodel_type & ASPHODEL_PROTOCOL_TYPE_BOOTLOADER) != 0,
@@ -229,11 +229,11 @@ function doRadioScan(device: Device) {
   console.log("scanning fo remotes devices");
   device.startRadioScan();
   sleep(1000);
-  var scans = collectScanResults(device);
-  var sensors: Device[] = [];
+  const scans = collectScanResults(device);
+  const sensors: Device[] = [];
 
   scans.forEach((scan) => {
-    var remote = device.getRemoteDevice();
+    const remote = device.getRemoteDevice();
     remote.open();
     try {
       if (!scan.bootloader) {
@@ -277,18 +277,18 @@ async function checkSensorsConnected(device: Device) {
 }
 
 function sleep(millis: number) {
-  var bgn = Date.now();
+  const bgn = Date.now();
   while (Date.now() - bgn < millis) {}
 }
 
 function startStreams(device: Device, active_streams: number[]) {
-  var stream_ids = active_streams.sort();
+  const stream_ids = active_streams.sort();
   stream_ids.forEach((id) => {
     device.warmUpStream(id, true);
   });
-  var warm_up_time = 0;
+  let warm_up_time = 0;
   stream_ids.forEach((id) => {
-    var stream = device.getStream(id).getInfo();
+    const stream = device.getStream(id).getInfo();
     if (stream.warm_up_delay > warm_up_time) {
       warm_up_time = stream.warm_up_delay;
     }
@@ -319,10 +319,10 @@ async function aquireDataSaving(
   channel: number
 ) {
   console.log("acquire for: ", time);
-  var out = new DeviceData(channel);
-  var device_info = createDeviceInfo(device, out);
+  const out = new DeviceData(channel);
+  const device_info = createDeviceInfo(device, out);
 
-  var streams_to_activate: number[] = [];
+  const streams_to_activate: number[] = [];
   for (let i = 0; i < device_info.stream_count; i++) {
     streams_to_activate.push(i);
   }
@@ -345,6 +345,8 @@ async function aquireDataSaving(
     apd_path
   );
 
+  await apd.init();
+
   try {
     device.startStreamingPackets(
       streaming_counts.packet_count,
@@ -352,6 +354,7 @@ async function aquireDataSaving(
       streaming_counts.timeout,
       (status, stream_data, packet_size, packet_count) => {
         if (status == 0) {
+          // TODO: Can we use async here? because apd.update is async (will call write to file)
           apd.update(stream_data);
           for (let packet = 0; packet < packet_count; packet++) {
             device_info.decoder.decode(stream_data.slice(packet * packet_size));
@@ -367,8 +370,7 @@ async function aquireDataSaving(
     startStreams(device, streams_to_activate);
 
     await new Promise((resolve) => {
-      let begin = Date.now();
-      var progress = 0;
+      const begin = Date.now();
       function loop() {
         if (Date.now() - begin < time) {
           try {
@@ -415,7 +417,7 @@ function calculateMean(data: number[]) {
 }
 
 function calculateVariance(mean: number, data: number[]) {
-  var sqdiff = data.map((value) => Math.pow(value - mean, 2));
+  const sqdiff = data.map((value) => Math.pow(value - mean, 2));
   return calculateMean(sqdiff);
 }
 
@@ -424,7 +426,7 @@ function calculateStandardDeviation(mean: number, data: number[]) {
 }
 
 function flattenByCol(data: Float64Array[][], col: number) {
-  var out: number[] = [];
+  const out: number[] = [];
   data.forEach((row) => {
     row.forEach((col) => {
       col.forEach((n) => out.push(n));
@@ -434,7 +436,7 @@ function flattenByCol(data: Float64Array[][], col: number) {
 }
 
 function calculateChannelStats(out: DeviceData) {
-  var means: {
+  const means: {
     subchannel: string;
     mean: {
       value: number;
@@ -450,9 +452,9 @@ function calculateChannelStats(out: DeviceData) {
     };
   }[] = [];
   out.subchannels.forEach((subchannel, i) => {
-    var sub_channel_data = flattenByCol(out.streams, i);
-    var mean = calculateMean(sub_channel_data);
-    var stddev = calculateStandardDeviation(mean, sub_channel_data);
+    const sub_channel_data = flattenByCol(out.streams, i);
+    const mean = calculateMean(sub_channel_data);
+    const stddev = calculateStandardDeviation(mean, sub_channel_data);
     means.push({
       subchannel,
       mean: {
@@ -482,11 +484,11 @@ function closeSensors(sensors: Device[]) {
 
 async function doWorkOnDevice(job: any) {
   init();
-  var config: AquireConfig = job.data;
+  const config: AquireConfig = job.data;
 
-  var devices = checkAllConnectedReceivers();
+  const devices = checkAllConnectedReceivers();
 
-  var actual_device = devices.find((dev) => {
+  const actual_device = devices.find((dev) => {
     try {
       dev.open();
       return dev.getSerialNumber() == config.device_config.receiver;
@@ -499,7 +501,7 @@ async function doWorkOnDevice(job: any) {
   if (!actual_device)
     throw new Error(`device ${config.device_config.receiver} not found.`);
   actual_device.open();
-  var sensors: Device[] = [];
+  let sensors: Device[] = [];
 
   try {
     sensors = await checkSensorsConnected(actual_device as Device);
@@ -511,7 +513,7 @@ async function doWorkOnDevice(job: any) {
   sensors.forEach((sensor) => {
     console.log("found sensor: ", sensor.getSerialNumber());
   });
-  var actual_sensor = sensors.find(
+  const actual_sensor = sensors.find(
     (sensor) => sensor.getSerialNumber() == config.device_config.sensor
   );
 
@@ -525,7 +527,7 @@ async function doWorkOnDevice(job: any) {
     );
   }
 
-  var results: any = null;
+  let results: any = null;
   try {
     results = await aquireDataSaving(
       actual_sensor as Device,
@@ -536,10 +538,10 @@ async function doWorkOnDevice(job: any) {
       config.device_config.sensorChannel
     );
 
-    var stats = calculateChannelStats(results.out);
+    const stats = calculateChannelStats(results.out);
     console.log("stats: test", stats);
 
-    for (var op of config.device_config.operations) {
+    for (let op of config.device_config.operations) {
       console.log("operation: ", op.operation, op);
       switch (op.operation.toLowerCase()) {
         case "save":
@@ -550,7 +552,9 @@ async function doWorkOnDevice(job: any) {
 
           if (params.type == "raw") {
             console.log("saving raw data to: ", params.filename);
-            await results.apd.final(`${config.base_path}/${params.filename}-${Date.now()}`);
+            await results.apd.final(
+              `${config.base_path}/${params.filename}-${Date.now()}`
+            );
           } else if (params.type == "processed") {
             fs.writeFileSync(
               `${config.base_path}/${params.filename}.json`,
@@ -613,7 +617,7 @@ async function doWorkOnDevice(job: any) {
     console.log("closing device");
     actual_device.close();
     if (results) {
-        console.log("finalizing apd", results);
+      console.log("finalizing apd", results);
       await results.apd.final(null);
     }
   }

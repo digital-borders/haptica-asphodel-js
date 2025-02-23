@@ -860,8 +860,8 @@ export function deviceToString(
   const tag_locations = device.getUserTagLocations();
   const nvm_size = device.getNVMSize();
   const channel_count = device.getChannelCount();
-  var calibrations: any[] = [];
-  var channels: any[] = [];
+  const calibrations: any[] = [];
+  const channels: any[] = [];
   for (let i = 0; i < channel_count; i++) {
     try {
       calibrations.push(device.getChannelCalibration(i).calibration);
@@ -873,8 +873,8 @@ export function deviceToString(
     const self = info.getInfo();
     const channel_name = device.getChannelName(i);
     const coefficients = device.getChannelCoefficients(i, 255);
-    var chunks: any[] = [];
-    var chunk_lengths: any[] = [];
+    const chunks: any[] = [];
+    const chunk_lengths: any[] = [];
     for (let j = 0; j < self.chunk_count; j++) {
       const chunk = device.getChannelChunk(i, j, 255);
       const slice = chunk.result.slice(0, chunk.length);
@@ -882,7 +882,7 @@ export function deviceToString(
       slice.forEach((s) => chunks.push(s));
       chunk_lengths.push(slice.length);
     }
-    var coefz: any[] = [];
+    const coefz: any[] = [];
     coefficients.result
       .slice(0, coefficients.length)
       .forEach((c) => coefz.push(c));
@@ -906,8 +906,8 @@ export function deviceToString(
     });
   }
 
-  var ctrl_vars: any[] = [];
-  var ctrl_var_count = device.getCtrlVarCount();
+  const ctrl_vars: any[] = [];
+  const ctrl_var_count = device.getCtrlVarCount();
 
   for (let i = 0; i < ctrl_var_count; i++) {
     const ctrl_var = device.getCtrlVar(i);
@@ -934,7 +934,7 @@ export function deviceToString(
   );
   const custom_enums = {};
   custom_enum_counts.forEach((count, j) => {
-    var names: string[] = [];
+    const names: string[] = [];
     for (let i = 0; i < count; i++) {
       names.push(device.getCustomEnumValueName(j, i));
     }
@@ -952,13 +952,13 @@ export function deviceToString(
 
   for (let i = 0; i < rgb_count; i++) {
     //rgb_settings.push([...device.getRGBValues(i)])
-    var rgb_setting: any[] = [];
+    const rgb_setting: any[] = [];
     device.getRGBValues(i).forEach((r) => rgb_setting.push(r));
-    rgb_setting.push(rgb_setting);
+    rgb_settings.push(rgb_setting);
   }
 
   const setting_category_count = device.getSettingCategoryCount();
-  var setting_categories: any[] = [];
+  const setting_categories: any[] = [];
   for (let i = 0; i < setting_category_count; i++) {
     let category: any[] = [];
     category.push(device.getSettingCategoryName(i));
@@ -968,17 +968,17 @@ export function deviceToString(
   }
 
   const setting_count = device.getSettingCount();
-  var settings: string[] = [];
+  const settings: string[] = [];
   for (let i = 0; i < setting_count; i++) {
     const setting_info = device.getSettingInfo(i);
     const setting_name = getSettingTypeName(setting_info.setting_type);
     const thi_name = device.getSettingName(i);
-    var set = `<AsphodelSettingInfo {name=b'${thi_name}', name_length=${thi_name.length}, `;
+    let set = `<AsphodelSettingInfo {name=b'${thi_name}', name_length=${thi_name.length}, `;
     set += "default_bytes=";
     const sd = device.getSettingDefault(i, 255);
     const sd_slice = sd.result.slice(0, sd.length);
     for (let idx = 0; idx < sd_slice.length; idx++) {
-      var chars = sd_slice[idx].toString(16);
+      const chars = sd_slice[idx].toString(16);
       set += "0x";
       set += chars.length == 1 ? "0" + chars : chars;
       if (idx != sd_slice.length - 1) {
@@ -988,7 +988,7 @@ export function deviceToString(
 
     set += `, default_bytes_length=${sd_slice.length}, setting_type=${setting_info.setting_type} (${setting_name}), `;
 
-    var u = "u=<" + setting_info.repr_name + " {";
+    let u = "u=<" + setting_info.repr_name + " {";
     const keys = Object.keys(setting_info.u);
 
     for (let idx = 0; idx < keys.length; idx++) {
@@ -1009,7 +1009,7 @@ export function deviceToString(
   }
 
   const stream_count = device.getStreamCount();
-  var stream_rate_infos: any[] = [];
+  const stream_rate_infos: any[] = [];
   for (let i = 0; i < stream_count.count; i++) {
     const stream_rate_info = device.getStreamRateInfo(i);
     stream_rate_infos.push([
@@ -1021,11 +1021,11 @@ export function deviceToString(
     ]);
   }
 
-  var streams: any[] = [];
+  const streams: any[] = [];
   for (let i = 0; i < stream_count.count; i++) {
     const stream = device.getStream(i);
     const self = stream.getInfo();
-    var _ch: any[] = [];
+    const _ch: any[] = [];
     self.channel_index_list
       .slice(0, self.channel_count)
       .forEach((v) => _ch.push(v));
@@ -1041,8 +1041,8 @@ export function deviceToString(
   }
 
   const supply_count = device.getSupplyCount();
-  var supplies: any[] = [];
-  var supply_results: any[] = [];
+  const supplies: any[] = [];
+  const supply_results: any[] = [];
   for (let i = 0; i < supply_count; i++) {
     const supply_name = device.getSupplyName(i);
     const supply_info = device.getSupplyInfo(i);
@@ -1056,7 +1056,7 @@ export function deviceToString(
         supply_info.offset,
       ],
     ]);
-    var supply_result: any = null;
+    let supply_result: any = null;
     try {
       supply_result = device.checkSupply(i, 20);
     } catch (e) {}
@@ -1067,65 +1067,65 @@ export function deviceToString(
     );
   }
 
-  var radio_ctrl_vars: any = null;
+  let radio_ctrl_vars: any = null;
   try {
     radio_ctrl_vars = device.getRadioCtrlVars(255);
   } catch (e) {}
 
-  var rf_ctrl_vars: any = null;
+  let rf_ctrl_vars: any = null;
   try {
-    var rf_ctrl = device.getRfPowerCtlVars(255);
+    const rf_ctrl = device.getRfPowerCtlVars(255);
     rf_ctrl_vars = [];
     rf_ctrl.result
       .slice(0, rf_ctrl.length)
       .forEach((v) => rf_ctrl_vars.push(v));
   } catch (e) {}
 
-  var supports_device_mode = true;
-  var device_mode: any = null;
+  let supports_device_mode = true;
+  let device_mode: any = null;
   try {
     device_mode = device.getDeviceMode();
   } catch (e) {
     supports_device_mode = false;
   }
 
-  var rf_power_status: any = null;
+  let rf_power_status: any = null;
   try {
     rf_power_status = device.getRfPowerStatus();
   } catch (e) {}
 
-  var nvm_hash: any = null;
+  let nvm_hash: any = null;
   try {
     nvm_hash = device.getNVMHash();
   } catch (e) {}
 
-  var nvm_modified: any = null;
+  let nvm_modified: any = null;
   try {
     nvm_modified = device.getNVMModified();
   } catch (e) {}
 
-  var setting_hash: any = null;
+  let setting_hash: any = null;
   try {
     setting_hash = device.getSettingHash();
   } catch (e) {}
 
-  var commit_id: any = null;
+  let commit_id: any = null;
   try {
     commit_id = device.getCommitID();
   } catch (e) {}
 
-  var repo_branch: any = null;
+  let repo_branch: any = null;
   try {
     repo_branch = device.getRepoBranch();
   } catch (e) {}
 
-  var repo_name: any = null;
+  let repo_name: any = null;
   try {
     repo_name = device.getRepoName();
   } catch (e) {}
 
-  var nvm = device.readNVMSection(0, nvm_size);
-  var nvm_str = "";
+  const nvm = device.readNVMSection(0, nvm_size);
+  let nvm_str = "";
   nvm.forEach((byte) => {
     let chars = byte.toString(16);
     if (chars.length == 1) {
@@ -1200,7 +1200,15 @@ export function deviceToString(
 }
 
 export class ApdBuilder {
+  device: Device;
+  streams_to_activate: number[];
   stream: WriteStream;
+  stream_counts: {
+    packet_count: number;
+    transfer_count: number;
+    timeout: number;
+  };
+  schedule_id: string;
   path: string;
 
   constructor(
@@ -1214,33 +1222,42 @@ export class ApdBuilder {
     schedule_id: string,
     path: string
   ) {
+    this.device = device;
+    this.streams_to_activate = streams_to_activate;
+    this.stream_counts = stream_counts;
+    this.schedule_id = schedule_id;
+    this.path = path;
+    // we can't use async function in constructor
+    // se we introduce init function
+  }
+
+  public async init() {
     const dev_str = deviceToString(
-      device,
-      streams_to_activate,
+      this.device,
+      this.streams_to_activate,
       [
-        stream_counts.packet_count,
-        stream_counts.transfer_count,
-        stream_counts.timeout,
+        this.stream_counts.packet_count,
+        this.stream_counts.transfer_count,
+        this.stream_counts.timeout,
       ],
-      schedule_id
+      this.schedule_id
     );
 
     const now = Date.now() / 1000;
-    this.path = path;
-    this.stream = fs.createWriteStream(path);
-    this.writeBuffer(
+
+    this.stream = fs.createWriteStream(this.path);
+    console.log("writing to stream...", dev_str);
+    await this.writeBuffer(
       {
         timestamp: now,
         buffer: dev_str,
       },
       true
-    ).catch((e) => {
-      throw e;
-    });
+    );
   }
 
   public update(data: Uint8Array) {
-    var now = Date.now() / 1000;
+    const now = Date.now() / 1000;
     this.writeBuffer({
       timestamp: now,
       buffer: data,
@@ -1254,18 +1271,25 @@ export class ApdBuilder {
     },
     head = false
   ) {
-    let buffer = Buffer.alloc(12 + dat.buffer.length);
-    buffer.writeDoubleBE(dat.timestamp, 0);
-    buffer.writeUint32BE(dat.buffer.length, 8);
-    if (head) {
-      buffer.write(dat.buffer as string, 12, "utf-8");
-    } else {
-      (dat.buffer as Uint8Array).forEach((byte, i) => {
-        buffer.writeUint8(byte, 12 + i);
+    return new Promise((resolve, reject) => {
+      let buffer = Buffer.alloc(12 + dat.buffer.length);
+      buffer.writeDoubleBE(dat.timestamp, 0);
+      buffer.writeUint32BE(dat.buffer.length, 8);
+      if (head) {
+        buffer.write(dat.buffer as string, 12, "utf-8");
+      } else {
+        (dat.buffer as Uint8Array).forEach((byte, i) => {
+          buffer.writeUint8(byte, 12 + i);
+        });
+      }
+      this.stream.write(buffer, (err) => {
+        if (err) {
+          console.error("error writing to stream", err);
+          reject(err);
+        }
+        console.log("wrote buffer to stream...", head);
+        resolve(true);
       });
-    }
-    this.stream.write(buffer, (err) => {
-      if (err) throw err;
     });
   }
 
@@ -1274,7 +1298,7 @@ export class ApdBuilder {
       console.log("finalizing apd file...", filename);
       if (filename == null) {
         fs.unlink(this.path, () => {
-          return reject("no filename provided");
+          return resolve("no filename provided");
         });
         return;
       }
@@ -1296,6 +1320,7 @@ export class ApdBuilder {
         });
       });
       this.stream.end();
+      console.log("stream ended...");
     });
   }
 }
