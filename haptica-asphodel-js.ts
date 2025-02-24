@@ -1293,12 +1293,13 @@ export class ApdBuilder {
     });
   }
 
+  // pass null filename here to delete the temp file without making apd file
   public async final(filename: string | null) {
     return new Promise((resolve, reject) => {
       console.log("finalizing apd file...", filename);
       if (filename == null) {
         fs.unlink(this.path, () => {
-          return resolve("no filename provided");
+          //return resolve("no filename provided");
         });
         return;
       }

@@ -539,7 +539,7 @@ async function doWorkOnDevice(job: any) {
     );
 
     const stats = calculateChannelStats(results.out);
-    console.log("stats: test", stats);
+    //console.log("stats: test", stats);
 
     for (let op of config.device_config.operations) {
       console.log("operation: ", op.operation, op);
@@ -560,7 +560,7 @@ async function doWorkOnDevice(job: any) {
               `${config.base_path}/${params.filename}.json`,
               JSON.stringify(stats)
             );
-          } else throw new Error(`processed output not implemented.`);
+          } else throw new Error(`${params.type} output not implemented.`);
           break;
         case "stddev":
         case "mean":
