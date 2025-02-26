@@ -1,5 +1,5 @@
 {
-  "basePath": "/home/melo/Desktop/haptica-asphodel-js/data",
+  "basePath": "/Users/carmelofiorello/Haptica/LibUsb/Upwork/haptica-asphodel-js/data",
   "mqtt": {
     "host": "mqtt://localhost",
     "port": 1883,
@@ -13,18 +13,35 @@
       "receiver": "WMRP4290",
       "sensor": "WM5552",
       "sensorChannel": 0,
+      "machine": "Compressor 1",
+      "duration": 10000,
+      "failure_delay": 20,
+      "cron_start": "* * * * *",
+      "operations": [
+        {
+          "operation": "save",
+          "params": {
+            "filename": "WM5552",
+            "type": "raw"
+          }
+        }
+      ],
+      "mqttTopic": "sensors/WM5552"
+    },
+    {
+      "type": "asphodel",
+      "receiver": "WMRTCP12755",
+      "sensor": "WM6359",
+      "sensorChannel": 0,
       "machine": "Compressor 2",
       "duration": 6000,
       "failure_delay": 20,
       "cron_start": "* * * * *",
       "operations": [
         {
-          "operation": "mean"
-        },
-        {
           "operation": "save",
           "params": {
-            "filename": "WM5552",
+            "filename": "WM6359",
             "type": "raw"
           }
         }

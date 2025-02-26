@@ -878,8 +878,9 @@ export function deviceToString(
     for (let j = 0; j < self.chunk_count; j++) {
       const chunk = device.getChannelChunk(i, j, 255);
       const slice = chunk.result.slice(0, chunk.length);
-      //chunks.push([...slice])
-      slice.forEach((s) => chunks.push(s));
+      let slice_arr:any[] = []
+      slice.forEach((s) => slice_arr.push(s));
+      chunks.push(slice_arr)
       chunk_lengths.push(slice.length);
     }
     const coefz: any[] = [];
@@ -1256,9 +1257,9 @@ export class ApdBuilder {
     );
   }
 
-  public update(data: Uint8Array) {
+  public async update(data: Uint8Array) {
     const now = Date.now() / 1000;
-    this.writeBuffer({
+    await this.writeBuffer({
       timestamp: now,
       buffer: data,
     });
@@ -1293,13 +1294,12 @@ export class ApdBuilder {
     });
   }
 
-  // pass null filename here to delete the temp file without making apd file
   public async final(filename: string | null) {
     return new Promise((resolve, reject) => {
       console.log("finalizing apd file...", filename);
       if (filename == null) {
         fs.unlink(this.path, () => {
-          //return resolve("no filename provided");
+          return resolve("no filename provided");
         });
         return;
       }
