@@ -224,11 +224,12 @@ function collectScanResults(device: Device) {
     return scans;
 }
 
-function doRadioScan(device: Device) {
+async function doRadioScan(device: Device) {
     console.log("scanning for remotes devices");
     device.startRadioScan();
     console.log("Radio scan started...")
-    sleep(1000);
+    // TODO: NEEDS TO BE ASYNC TO SLEEP
+    await sleep(1000);
     const scans = collectScanResults(device);
     console.log("Radio scan ended...")
     const sensors: Device[] = [];
@@ -268,12 +269,12 @@ async function checkSensorsConnected(device: Device) {
     if (device.supportsRadioCommands()) {
         while (true) {
             try {
-                remote_devices = doRadioScan(device);
+                remote_devices = await doRadioScan(device);
                 break;
             } catch (e) {
                 console.error(e);
                 console.log("Check sensors: RETRING....")
-                sleep(1000);
+                await sleep(1000);
             }
         }
     }
@@ -281,12 +282,59 @@ async function checkSensorsConnected(device: Device) {
     return remote_devices;
 }
 
-function sleep(millis: number) {
-    const bgn = Date.now();
-    while (Date.now() - bgn < millis) { }
+function closeSensors(sensors: Device[]) {
+    sensors.forEach((sensor) => {
+        let sn = "<Failed to get serial number>";
+        try {
+            sn = sensor.getSerialNumber();
+        } catch (e) { }
+
+        console.log("closing sensor: ", sn);
+        try {
+            sensor.close();
+            sensor.free();
+            console.log(`sensor ${sn} closed`)
+        } catch (e) {
+            console.error(e);
+        }
+    });
 }
 
-function startStreams(device: Device, active_streams: number[]) {
+// if this functio returns without sensor being found a error will happen
+async function findSensor(device: Device, serial_number: string, no_of_tries: number = 1) {
+    let trial = 0;
+    return await new Promise((resolve)=>{
+        async function finder() {        
+            for (let i = 0; i < no_of_tries; i++) {
+                console.log(`TRIAL ${trial} of finding sensor ${serial_number}`)
+                const sensors = await checkSensorsConnected(device)
+                const target_sensor = sensors.find((sensor) => sensor.getSerialNumber() == serial_number)
+                if (target_sensor) {
+                    resolve(target_sensor);
+                    return
+                }
+                closeSensors(sensors)
+                await sleep(100);
+            }
+            resolve(null)
+        }
+        finder();
+    })
+}
+
+async function sleep(millis: number) {
+
+    return new Promise((resolve) => {
+
+        setTimeout(() => {
+            console.log("elapsed" + millis + " ms")
+            resolve(true);
+        }, millis)
+    })
+
+}
+
+async function startStreams(device: Device, active_streams: number[]) {
     const stream_ids = active_streams.sort();
     stream_ids.forEach((id) => {
         device.warmUpStream(id, true);
@@ -298,8 +346,8 @@ function startStreams(device: Device, active_streams: number[]) {
             warm_up_time = stream.warm_up_delay;
         }
     });
-
-    sleep(warm_up_time * 1000);
+    // TODO: NEEDS TO BE ASYNC TO SLEEP
+    await sleep(warm_up_time * 1000);
 
     stream_ids.forEach((id) => {
         device.enableStream(id, true);
@@ -372,7 +420,7 @@ async function aquireDataSaving(
             }
         );
 
-        startStreams(device, streams_to_activate);
+        await startStreams(device, streams_to_activate);
 
         await new Promise((resolve) => {
             const begin = Date.now();
@@ -479,23 +527,7 @@ function calculateChannelStats(out: DeviceData) {
     return means;
 }
 
-function closeSensors(sensors: Device[]) {
-    sensors.forEach((sensor) => {
-        let sn = "<Failed to get serial number>";
-        try {
-            sn = sensor.getSerialNumber();
-        }catch(e){}
 
-        console.log("closing sensor: ", sn);
-        try {
-            sensor.close();
-            sensor.free();
-            console.log(`sensor ${sn} closed`)
-        } catch (e) {
-            console.error(e);
-        }
-    });
-}
 
 async function doWorkOnDevice(job: any) {
     init();
@@ -506,7 +538,9 @@ async function doWorkOnDevice(job: any) {
     const actual_device = devices.find((dev) => {
         try {
             dev.open();
-            return dev.getSerialNumber() == config.device_config.receiver;
+            const found = dev.getSerialNumber() == config.device_config.receiver;
+            dev.close();
+            return found;
         } catch (e) {
             return false;
         }
@@ -515,24 +549,24 @@ async function doWorkOnDevice(job: any) {
         throw new Error(`device ${config.device_config.receiver} not found.`);
     actual_device.open();
     console.log("FOUND RECEIVER: ", actual_device.getSerialNumber())
-    let sensors: Device[] = [];
 
-    try {
-        sensors = await checkSensorsConnected(actual_device as Device);
-    } catch (e) {
-        actual_device.close();
-        throw e;
-    }
+    //let sensors: Device[] = [];
+    //try {
+    //    sensors = await checkSensorsConnected(actual_device as Device);
+    //} catch (e) {
+    //    actual_device.close();
+    //    throw e;
+    //}
+    //sensors.forEach((sensor) => {
+    //    console.log("found sensor: ", sensor.getSerialNumber());
+    //});
+    //const actual_sensor = sensors.find(
+    //    (sensor) => sensor.getSerialNumber() == config.device_config.sensor
+    //);
 
-    sensors.forEach((sensor) => {
-        console.log("found sensor: ", sensor.getSerialNumber());
-    });
-    const actual_sensor = sensors.find(
-        (sensor) => sensor.getSerialNumber() == config.device_config.sensor
-    );
+    let actual_sensor = await findSensor(actual_device, config.device_config.sensor, 10) as Device | null;
 
-    if (actual_sensor == undefined) {
-        closeSensors(sensors);
+    if (actual_sensor == null) {
         try {
             actual_device.close();
         } catch (e) {
@@ -646,8 +680,11 @@ async function doWorkOnDevice(job: any) {
     } catch (e) {
         throw e;
     } finally {
-        console.log("closing sensors finally");
-        closeSensors(sensors);
+        console.log("closing sensor finally");
+        try {
+            actual_sensor.close();
+            actual_sensor.free();
+        } catch (e) { }
         console.log("closing device");
         try {
             actual_device.close();
@@ -657,6 +694,7 @@ async function doWorkOnDevice(job: any) {
             // deleting tmp file.
             await results.apd.final(null);
         }
+        deinit();
     }
 }
 

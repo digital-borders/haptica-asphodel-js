@@ -1,5 +1,5 @@
 {
-  "basePath": "/Users/carmelofiorello/Haptica/LibUsb/Upwork/haptica-asphodel-js/data",
+  "basePath": "/home/melo/Desktop/haptica-asphodel-js/data",
   "mqtt": {
     "host": "mqtt://localhost",
     "port": 1883,
