@@ -49,7 +49,7 @@ function createDeviceInfo(device: Device): DeviceInfo {
 }
 
 async function main() {
-        let devices = USBFindDevices(10);
+        let devices = USBFindDevices();
 
         console.log(`Found ${devices.length} devices`);
 

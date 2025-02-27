@@ -933,7 +933,7 @@ export function deviceToString(
     0,
     custom_enum_counts_h.length
   );
-  const custom_enums = {};
+  const custom_enums: any = {};
   custom_enum_counts.forEach((count, j) => {
     const names: string[] = [];
     for (let i = 0; i < count; i++) {
@@ -1203,7 +1203,7 @@ export function deviceToString(
 export class ApdBuilder {
   device: Device;
   streams_to_activate: number[];
-  stream: WriteStream;
+  stream!: WriteStream;
   stream_counts: {
     packet_count: number;
     transfer_count: number;

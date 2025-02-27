@@ -7,7 +7,7 @@ USBInit();
 
 async function main() {
 
-    const devices = USBFindDevices(1);
+    const devices = USBFindDevices();
     console.log(`Found ${devices.length} devices!`)
     //devices.forEach((device) => {
     for (let device of devices) {

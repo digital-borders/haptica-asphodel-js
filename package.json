@@ -7,7 +7,8 @@
     "test": "node binding.js",
     "gyp-configure": "node-gyp configure",
     "gyp-build": "node-gyp build",
-    "cyc": "tsc ./apps/*.ts && node ./apps/cycling.js"
+    "cyc": "tsc ./apps/*.ts && node ./apps/cycling.js",
+    "flow": "tsc && node ./build/apps/bull-mq/index.js"
   },
   "keywords": [],
   "author": "",
